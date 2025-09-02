@@ -3,6 +3,12 @@
 An AI-powered app that securely extracts and displays your upcoming payment
 details from Gmail without storing your email data.
 
+
+## Technologies
+
+* [Go](https://github.com/golang/go)
+  * [Gin](https://github.com/gin-gonic/gin)
+
 ## Conventions
 
 * [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/)
