@@ -1,4 +1,4 @@
-# PayPulse.pro(working title)
+# Kiwis Worker
 
 An AI-powered app that securely extracts and displays your upcoming payment
 details from Gmail without storing your email data.
