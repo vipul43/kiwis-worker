@@ -4,7 +4,7 @@ import (
 	"context"
 	"log"
 
-	"github.com/yourusername/payment-tracker/internal/models"
+	"github.com/vipul43/kiwis-worker/internal/models"
 )
 
 // processEmailJob processes a single email sync job

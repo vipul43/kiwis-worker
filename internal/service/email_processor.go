@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/yourusername/payment-tracker/internal/models"
-	"github.com/yourusername/payment-tracker/internal/repository"
+	"github.com/vipul43/kiwis-worker/internal/models"
+	"github.com/vipul43/kiwis-worker/internal/repository"
 )
 
 const (
@@ -112,7 +112,6 @@ func (p *EmailProcessor) ProcessEmailSyncJob(ctx context.Context, job models.Ema
 
 	log.Printf("Fetching %d emails for account %s (page_token: %s)", batchSize, job.AccountID, pageToken)
 
-	// TODO: Implement actual Gmail API call
 	result, err := p.gmailClient.FetchEmails(ctx, accessToken, query, batchSize, pageToken)
 	if err != nil {
 		return fmt.Errorf("failed to fetch emails: %w", err)
@@ -122,6 +121,9 @@ func (p *EmailProcessor) ProcessEmailSyncJob(ctx context.Context, job models.Ema
 
 	// TODO: Store emails in database (placeholder for now)
 	// This will be implemented when we add the emails table
+	for _, msg := range result.Messages {
+		log.Printf("  - Email: %s | From: %s | Date: %s", msg.Subject, msg.From, msg.Date.Format("2006-01-02"))
+	}
 
 	// Update job progress
 	newEmailsFetched := job.EmailsFetched + len(result.Messages)
@@ -154,14 +156,17 @@ func (p *EmailProcessor) refreshToken(ctx context.Context, account *repository.A
 		return "", fmt.Errorf("no refresh token available")
 	}
 
-	// TODO: Implement actual token refresh via Gmail API
 	result, err := p.gmailClient.RefreshAccessToken(ctx, *account.RefreshToken)
 	if err != nil {
 		return "", fmt.Errorf("failed to refresh token: %w", err)
 	}
 
 	// Update account with new tokens
-	// TODO: Add UpdateTokens method to AccountRepository
+	err = p.accountRepo.UpdateTokens(ctx, account.ID, result.AccessToken, result.RefreshToken, result.ExpiresAt)
+	if err != nil {
+		return "", fmt.Errorf("failed to update tokens in database: %w", err)
+	}
+
 	log.Printf("Token refreshed for account %s, expires at %s", account.ID, result.ExpiresAt)
 
 	return result.AccessToken, nil

@@ -5,9 +5,9 @@ import (
 	"log"
 	"time"
 
-	"github.com/yourusername/payment-tracker/internal/config"
-	"github.com/yourusername/payment-tracker/internal/repository"
-	"github.com/yourusername/payment-tracker/internal/service"
+	"github.com/vipul43/kiwis-worker/internal/config"
+	"github.com/vipul43/kiwis-worker/internal/repository"
+	"github.com/vipul43/kiwis-worker/internal/service"
 )
 
 type Watcher struct {

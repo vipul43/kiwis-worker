@@ -8,11 +8,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/yourusername/payment-tracker/internal/config"
-	"github.com/yourusername/payment-tracker/internal/database"
-	"github.com/yourusername/payment-tracker/internal/repository"
-	"github.com/yourusername/payment-tracker/internal/service"
-	"github.com/yourusername/payment-tracker/internal/watcher"
+	"github.com/vipul43/kiwis-worker/internal/config"
+	"github.com/vipul43/kiwis-worker/internal/database"
+	"github.com/vipul43/kiwis-worker/internal/gmail"
+	"github.com/vipul43/kiwis-worker/internal/repository"
+	"github.com/vipul43/kiwis-worker/internal/service"
+	"github.com/vipul43/kiwis-worker/internal/watcher"
 )
 
 func main() {
@@ -52,8 +53,8 @@ func run() error {
 	// Initialize services
 	accountProcessor := service.NewAccountProcessor(accountRepo)
 
-	// TODO: Initialize Gmail client (placeholder for now)
-	var gmailClient service.GmailClient = nil
+	// Initialize Gmail client
+	gmailClient := gmail.NewClient(cfg.GmailClientID, cfg.GmailClientSecret)
 	emailProcessor := service.NewEmailProcessor(accountRepo, emailJobRepo, gmailClient)
 
 	// Initialize watcher

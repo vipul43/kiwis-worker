@@ -58,11 +58,15 @@ The service will:
 ## Configuration
 
 Edit `.env`:
-- `DATABASE_URL`: PostgreSQL connection string (add `?sslmode=disable` for local dev)
+- `DATABASE_URL`: PostgreSQL connection string (required)
+- `GMAIL_CLIENT_ID`: Google OAuth client ID (required for Gmail API)
+- `GMAIL_CLIENT_SECRET`: Google OAuth client secret (required for Gmail API)
 
 Example:
 ```
 DATABASE_URL="postgres://user:password@localhost:5432/dbname?sslmode=disable"
+GMAIL_CLIENT_ID="123456-abc.apps.googleusercontent.com"
+GMAIL_CLIENT_SECRET="GOCSPX-xyz123"
 ```
 
 Defaults (in code):
@@ -214,18 +218,37 @@ pending → processing → pending → processing → ... → synced
 - Auto-refreshes if expired or within 5 minutes of expiry
 - Updates account table with new tokens and expiry times
 
+## Gmail API Integration
+
+### Setup
+
+1. **Get OAuth2 credentials** from [Google Cloud Console](https://console.cloud.google.com/):
+   - Create a project
+   - Enable Gmail API
+   - Create OAuth 2.0 Client ID
+   - Add to `.env`:
+     ```
+     GMAIL_CLIENT_ID="your-client-id.apps.googleusercontent.com"
+     GMAIL_CLIENT_SECRET="your-client-secret"
+     ```
+
+2. **Features implemented**:
+   - ✅ OAuth2 token refresh with automatic expiry checking
+   - ✅ Gmail messages.list API (with pagination)
+   - ✅ Gmail messages.get API (full message details)
+   - ✅ Email body extraction (text/plain and text/html)
+   - ✅ Email date parsing (multiple formats)
+   - ✅ Token storage and updates in database
+
 ## Next Steps
 
-1. **Implement Gmail API client** (`internal/service/email_processor.go`):
-   - OAuth2 token refresh
-   - Gmail messages.list API
-   - Gmail messages.get API (batch)
-   
-2. **Add emails table** for storing fetched emails
+1. **Add emails table** for storing fetched emails
 
-3. **Implement AI payment extraction** from email content
+2. **Implement AI payment extraction** from email content
 
-4. **Store extracted payments** in payments table
+3. **Store extracted payments** in payments table
+
+4. **Setup Gmail webhook** for real-time email notifications
 
 ## Technologies
 

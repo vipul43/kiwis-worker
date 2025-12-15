@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/yourusername/payment-tracker/internal/repository"
+	"github.com/vipul43/kiwis-worker/internal/repository"
 )
 
 type mockAccountRepository struct {

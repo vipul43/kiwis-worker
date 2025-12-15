@@ -68,3 +68,22 @@ func (r *AccountRepository) GetByID(ctx context.Context, accountID string) (*Acc
 
 	return &acc, nil
 }
+
+// UpdateTokens updates access token, refresh token, and their expiry times
+func (r *AccountRepository) UpdateTokens(ctx context.Context, accountID string, accessToken string, refreshToken string, accessTokenExpiresAt time.Time) error {
+	query := `
+		UPDATE account
+		SET access_token = $1,
+		    refresh_token = $2,
+		    access_token_expires_at = $3,
+		    updated_at = $4
+		WHERE id = $5
+	`
+
+	_, err := r.db.ExecContext(ctx, query, accessToken, refreshToken, accessTokenExpiresAt, time.Now(), accountID)
+	if err != nil {
+		return fmt.Errorf("failed to update tokens: %w", err)
+	}
+
+	return nil
+}

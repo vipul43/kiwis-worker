@@ -28,6 +28,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Token refresh logic with automatic expiry checking**
 - **Failed job handling: skipped in round-robin until manually reset**
 - **UUID-based IDs: all job IDs use UUIDs for flexibility**
+- **Gmail API integration: OAuth2 token refresh, email fetching, body extraction**
+- **Token management: automatic refresh and database updates**
+- **Email parsing: supports multiple date formats, extracts text/plain and text/html**
+- **Pagination: Gmail API pagination with nextPageToken support**
 - Retry logic with configurable max attempts (default: 3)
 - Graceful shutdown handling with context cancellation
 - Database migrations using golang-migrate

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/yourusername/payment-tracker/internal/models"
+	"github.com/vipul43/kiwis-worker/internal/models"
 )
 
 type EmailSyncJobRepository struct {

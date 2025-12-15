@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/yourusername/payment-tracker/internal/repository"
+	"github.com/vipul43/kiwis-worker/internal/repository"
 )
 
 // AccountRepository interface for dependency injection
