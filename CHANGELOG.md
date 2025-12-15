@@ -15,18 +15,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Retry logic with configurable max attempts (default: 3)
 - Graceful shutdown handling with context cancellation
 - Database migrations using golang-migrate
-- Makefile commands for build, run, and migration management
+- Makefile commands for build, run, migration management, and testing
 - Test setup SQL file for database initialization with snake_case columns
 - CASCADE delete on account removal (automatically removes sync jobs)
 - Clean architecture with separation of concerns (config, database, models, repository, service, watcher)
 - Type-safe enums in Go code with VARCHAR storage in database
 - Connection pooling configuration
 - Environment-based configuration via .env file
+- Comprehensive unit tests for all layers (config, models, repository, service)
+- Test coverage reporting with HTML output
+- Mock-based testing using go-sqlmock for database operations
 
 ### Changed
 
 - Database column naming convention to snake_case for PostgreSQL standards
 - Status field from ENUM type to VARCHAR(50) with CHECK constraint for easier schema evolution
+- AccountProcessor now uses interface for better testability
 
 ### Technical
 
@@ -34,3 +38,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Composite index on (status, created_at) for efficient polling
 - Unique constraint on account_id (one job per account)
 - SSL mode configurable via DATABASE_URL query parameter
+- Dependency injection pattern for testability

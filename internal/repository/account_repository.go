@@ -31,6 +31,8 @@ func NewAccountRepository(db *sql.DB) *AccountRepository {
 	return &AccountRepository{db: db}
 }
 
+var ErrAccountNotFound = fmt.Errorf("account not found")
+
 // GetByID retrieves account by ID
 func (r *AccountRepository) GetByID(ctx context.Context, accountID string) (*Account, error) {
 	query := `
@@ -59,7 +61,7 @@ func (r *AccountRepository) GetByID(ctx context.Context, accountID string) (*Acc
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, fmt.Errorf("account not found: %s", accountID)
+			return nil, ErrAccountNotFound
 		}
 		return nil, fmt.Errorf("failed to get account: %w", err)
 	}

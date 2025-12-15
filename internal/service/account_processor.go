@@ -8,11 +8,16 @@ import (
 	"github.com/yourusername/payment-tracker/internal/repository"
 )
 
-type AccountProcessor struct {
-	accountRepo *repository.AccountRepository
+// AccountRepository interface for dependency injection
+type AccountRepository interface {
+	GetByID(ctx context.Context, accountID string) (*repository.Account, error)
 }
 
-func NewAccountProcessor(accountRepo *repository.AccountRepository) *AccountProcessor {
+type AccountProcessor struct {
+	accountRepo AccountRepository
+}
+
+func NewAccountProcessor(accountRepo AccountRepository) *AccountProcessor {
 	return &AccountProcessor{
 		accountRepo: accountRepo,
 	}

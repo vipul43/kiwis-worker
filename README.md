@@ -103,12 +103,35 @@ make migrate-up         # Apply all pending migrations
 make migrate-down       # Rollback last migration
 make migrate-status     # Show current migration version
 make migrate-create name=your_migration  # Create new migration
+
+# Testing
+make test               # Run all tests
+make test-coverage      # Run tests with coverage report
 ```
 
 ## Testing
 
-### Insert Test Account
+### Unit Tests
 
+Run all tests:
+```bash
+make test
+```
+
+Generate coverage report:
+```bash
+make test-coverage
+# Opens coverage.html in browser
+```
+
+**Current Coverage:**
+- Config: 100%
+- Repository: 85%
+- Service: 100%
+
+### Integration Testing
+
+Insert test account:
 ```bash
 psql "$DATABASE_URL" -c "
 INSERT INTO account (
@@ -130,15 +153,12 @@ VALUES (
 "
 ```
 
-### Check Job Status
-
+Check job status:
 ```bash
 psql "$DATABASE_URL" -c "SELECT * FROM account_sync_job ORDER BY created_at DESC LIMIT 5;"
 ```
 
-### View Logs
-
-The watcher logs will show:
+View watcher logs:
 ```
 Found 1 pending job(s)
 Processing job <id> for account <account_id>
@@ -168,6 +188,7 @@ Implement Gmail API integration in `internal/service/account_processor.go`:
 - **Go 1.21+**: Backend service
 - **PostgreSQL**: Database with triggers
 - **golang-migrate**: Database migrations
+- **go-sqlmock**: Testing library for database mocks
 - **Prisma**: Schema management (frontend)
 
 ## Conventions

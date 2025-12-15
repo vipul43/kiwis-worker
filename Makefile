@@ -19,5 +19,13 @@ deps: ## Download dependencies
 migrate-create: ## Create a new migration (usage: make migrate-create name=migration_name)
 	migrate create -ext sql -dir migrations -seq $(name)
 
+test: ## Run all tests
+	go test -v ./...
+
+test-coverage: ## Run tests with coverage report
+	go test -v -coverprofile=coverage.out ./...
+	go tool cover -html=coverage.out -o coverage.html
+	@echo "✅ Coverage report generated: coverage.html"
+
 clean: ## Clean build artifacts
-	rm -rf bin/
+	rm -rf bin/ coverage.out coverage.html

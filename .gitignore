@@ -28,6 +28,10 @@ go.work.sum
 # env file
 .env
 
+# Test coverage
+coverage.out
+coverage.html
+
 # Editor/IDE
 # .idea/
 # .vscode/
