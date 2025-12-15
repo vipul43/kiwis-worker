@@ -175,13 +175,57 @@ Successfully completed job <id>
 - **Graceful shutdown**: Completes current job before exit
 - **Retry logic**: Failed jobs retry up to 3 times before marking as failed
 
+## Email Sync Strategy
+
+### Fair Round-Robin with New Account Priority
+- **New accounts** (`last_synced_at = NULL`): Get picked first
+- **After first batch**: Join the fair pool with everyone else
+- **Fair pool**: Oldest `last_synced_at` gets picked next
+- **Query**: `ORDER BY last_synced_at ASC NULLS FIRST, created_at ASC`
+
+### Fetching Behavior
+- Fetches **50 emails per batch** to minimize memory usage
+- Fetches in **reverse chronological order** (newest first) for recent payment dues
+- Processes **one account at a time** (round-robin)
+- **Resumes from last page** if interrupted
+- Filters: **received emails only**, **excludes spam**
+- Limits: **10,000 emails max** or **1 year of history** per account
+
+### Job Lifecycle
+```
+pending → processing → pending → processing → ... → synced
+                                                      ↓
+                                            (webhook creates new job)
+```
+
+- **pending**: Ready to fetch next batch
+- **processing**: Currently fetching
+- **synced**: All historical emails fetched, waiting for webhook
+- **failed**: Failed after max retries, skipped until manually reset
+
+### Round-Robin Fairness
+- After processing, `last_synced_at` is updated to NOW()
+- Job goes to **back of queue** (oldest `last_synced_at` goes first)
+- Prevents immediate re-processing of same account
+- Ensures all accounts get equal turns
+
+### Token Management
+- Checks token expiry before each API call
+- Auto-refreshes if expired or within 5 minutes of expiry
+- Updates account table with new tokens and expiry times
+
 ## Next Steps
 
-Implement Gmail API integration in `internal/service/account_processor.go`:
-1. Token refresh logic
-2. Fetch emails in batches
-3. Extract payment information
-4. Store in payments table
+1. **Implement Gmail API client** (`internal/service/email_processor.go`):
+   - OAuth2 token refresh
+   - Gmail messages.list API
+   - Gmail messages.get API (batch)
+   
+2. **Add emails table** for storing fetched emails
+
+3. **Implement AI payment extraction** from email content
+
+4. **Store extracted payments** in payments table
 
 ## Technologies
 

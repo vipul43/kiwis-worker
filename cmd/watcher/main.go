@@ -45,14 +45,19 @@ func run() error {
 	log.Println("Migrations completed successfully")
 
 	// Initialize repositories
-	jobRepo := repository.NewAccountSyncJobRepository(db)
+	accountJobRepo := repository.NewAccountSyncJobRepository(db)
+	emailJobRepo := repository.NewEmailSyncJobRepository(db)
 	accountRepo := repository.NewAccountRepository(db)
 
 	// Initialize services
 	accountProcessor := service.NewAccountProcessor(accountRepo)
 
+	// TODO: Initialize Gmail client (placeholder for now)
+	var gmailClient service.GmailClient = nil
+	emailProcessor := service.NewEmailProcessor(accountRepo, emailJobRepo, gmailClient)
+
 	// Initialize watcher
-	w := watcher.New(cfg, jobRepo, accountProcessor)
+	w := watcher.New(cfg, accountJobRepo, emailJobRepo, accountProcessor, emailProcessor)
 
 	// Setup graceful shutdown
 	ctx, cancel := context.WithCancel(context.Background())
