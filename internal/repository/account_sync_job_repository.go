@@ -36,6 +36,25 @@ func (r *AccountSyncJobRepository) GetPendingJobs(ctx context.Context, limit int
 	return r.scanJobs(rows)
 }
 
+// GetFailedJobs retrieves all failed account sync jobs for retry
+func (r *AccountSyncJobRepository) GetFailedJobs(ctx context.Context, limit int) ([]models.AccountSyncJob, error) {
+	query := `
+		SELECT id, account_id, status, attempts, last_error, created_at, updated_at, processed_at
+		FROM account_sync_job
+		WHERE status = $1
+		ORDER BY created_at ASC
+		LIMIT $2
+	`
+
+	rows, err := r.db.QueryContext(ctx, query, models.StatusFailed, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query failed jobs: %w", err)
+	}
+	defer rows.Close()
+
+	return r.scanJobs(rows)
+}
+
 // UpdateStatus updates the job status
 func (r *AccountSyncJobRepository) UpdateStatus(ctx context.Context, jobID string, status models.AccountSyncStatus, lastError *string) error {
 	query := `

@@ -1,5 +1,11 @@
 .PHONY: help build run migrate-up migrate-down clean
 
+# Load environment variables from .env file
+ifneq (,$(wildcard .env))
+    include .env
+    export
+endif
+
 help: ## Show this help message
 	@echo 'Usage: make [target]'
 	@echo ''
@@ -7,17 +13,49 @@ help: ## Show this help message
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  %-15s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
 build: ## Build the application
-	go build -o bin/watcher cmd/watcher/main.go
+	go build -o bin/kiwis-worker cmd/kiwis-worker/main.go
 
 run: ## Run the application
-	go run cmd/watcher/main.go
+	@test -f .env || (echo "Error: .env file not found" && exit 1)
+	go run cmd/kiwis-worker/main.go
 
 deps: ## Download dependencies
 	go mod download
 	go mod tidy
 
-migrate-create: ## Create a new migration (usage: make migrate-create name=migration_name)
+migrate-install: ## Install golang-migrate CLI
+	@which migrate > /dev/null || (echo "Installing golang-migrate..." && go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest)
+
+migrate-up: migrate-install ## Apply all pending migrations
+	@test -f .env || (echo "Error: .env file not found" && exit 1)
+	@test -n "$(DATABASE_URL)" || (echo "Error: DATABASE_URL not set in .env" && exit 1)
+	migrate -path migrations -database "$(DATABASE_URL)" up
+
+migrate-down: migrate-install ## Rollback last migration
+	@test -f .env || (echo "Error: .env file not found" && exit 1)
+	@test -n "$(DATABASE_URL)" || (echo "Error: DATABASE_URL not set in .env" && exit 1)
+	migrate -path migrations -database "$(DATABASE_URL)" down 1
+
+migrate-status: migrate-install ## Show current migration version
+	@test -f .env || (echo "Error: .env file not found" && exit 1)
+	@test -n "$(DATABASE_URL)" || (echo "Error: DATABASE_URL not set in .env" && exit 1)
+	migrate -path migrations -database "$(DATABASE_URL)" version
+
+migrate-create: migrate-install ## Create a new migration (usage: make migrate-create name=migration_name)
 	migrate create -ext sql -dir migrations -seq $(name)
+
+fmt: ## Format code using gofmt
+	@echo "Formatting code..."
+	gofmt -w -s .
+	@echo "✅ Code formatted"
+
+lint-install: ## Install golangci-lint
+	@which golangci-lint > /dev/null || (echo "Installing golangci-lint..." && go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest && echo "✅ Installed to $(shell go env GOPATH)/bin/golangci-lint")
+
+lint: lint-install ## Run linter using golangci-lint
+	@echo "Running linter..."
+	@$(shell go env GOPATH)/bin/golangci-lint run ./...
+	@echo "✅ Linting complete"
 
 test: ## Run all tests
 	go test -v ./...

@@ -43,18 +43,12 @@ func (w *Watcher) processAccountJob(ctx context.Context, job models.AccountSyncJ
 	return nil
 }
 
-// handleAccountJobError handles account job processing errors with retry logic
+// handleAccountJobError handles account job processing errors with infinite retry
 func (w *Watcher) handleAccountJobError(ctx context.Context, job models.AccountSyncJob, err error) error {
 	errMsg := err.Error()
 	newAttempts := job.Attempts + 1
 
-	// Check if max retries reached
-	if newAttempts >= w.cfg.MaxRetries {
-		log.Printf("Account job %s failed after %d attempts: %v", job.ID, newAttempts, err)
-		return w.accountJobRepo.UpdateStatus(ctx, job.ID, models.StatusFailed, &errMsg)
-	}
-
-	// Reset to pending for retry
-	log.Printf("Account job %s failed (attempt %d/%d), will retry: %v", job.ID, newAttempts, w.cfg.MaxRetries, err)
+	// Reset to pending for infinite retry
+	log.Printf("Account job %s failed (attempt %d), will retry: %v", job.ID, newAttempts, err)
 	return w.accountJobRepo.UpdateStatus(ctx, job.ID, models.StatusPending, &errMsg)
 }

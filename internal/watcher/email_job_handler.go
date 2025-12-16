@@ -58,23 +58,15 @@ func (w *Watcher) processEmailJob(ctx context.Context, job models.EmailSyncJob) 
 	return nil
 }
 
-// handleEmailJobError handles email job processing errors with retry logic
+// handleEmailJobError handles email job processing errors with infinite retry
 func (w *Watcher) handleEmailJobError(ctx context.Context, job models.EmailSyncJob, err error) error {
 	errMsg := err.Error()
 	newAttempts := job.Attempts + 1
 
-	// Check if max retries reached
-	if newAttempts >= w.cfg.MaxRetries {
-		log.Printf("Email job %s failed after %d attempts, marking as failed: %v", job.ID, newAttempts, err)
-		// Mark as failed - it will be skipped in round-robin until manually reset
-		return w.emailJobRepo.UpdateStatus(ctx, job.ID, models.EmailStatusFailed, &errMsg)
-	}
+	// Reset to pending for infinite retry
+	log.Printf("Email job %s failed (attempt %d), will retry in next round: %v", job.ID, newAttempts, err)
 
-	// Reset to pending for retry in next round
-	// Update last_synced_at to push to back of queue
-	log.Printf("Email job %s failed (attempt %d/%d), will retry in next round: %v", job.ID, newAttempts, w.cfg.MaxRetries, err)
-
-	// Update progress with current state to update last_synced_at
+	// Update progress with current state to update last_synced_at (pushes to back of queue)
 	if err := w.emailJobRepo.UpdateProgress(ctx, job.ID, job.EmailsFetched, job.PageToken); err != nil {
 		log.Printf("Warning: failed to update progress after error: %v", err)
 	}

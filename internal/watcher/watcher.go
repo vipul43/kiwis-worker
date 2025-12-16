@@ -75,18 +75,28 @@ func (w *Watcher) processAllPendingJobs(ctx context.Context) error {
 	return nil
 }
 
-// processAccountSyncJobs processes pending account sync jobs
+// processAccountSyncJobs processes pending and failed account sync jobs
 func (w *Watcher) processAccountSyncJobs(ctx context.Context) error {
-	jobs, err := w.accountJobRepo.GetPendingJobs(ctx, 5)
+	// Get pending jobs
+	pendingJobs, err := w.accountJobRepo.GetPendingJobs(ctx, 5)
 	if err != nil {
 		return err
 	}
+
+	// Get failed jobs for retry
+	failedJobs, err := w.accountJobRepo.GetFailedJobs(ctx, 5)
+	if err != nil {
+		return err
+	}
+
+	// Combine both lists
+	jobs := append(pendingJobs, failedJobs...)
 
 	if len(jobs) == 0 {
 		return nil
 	}
 
-	log.Printf("Found %d pending account sync job(s)", len(jobs))
+	log.Printf("Found %d account sync job(s) to process", len(jobs))
 
 	for _, job := range jobs {
 		if err := w.processAccountJob(ctx, job); err != nil {
@@ -97,19 +107,36 @@ func (w *Watcher) processAccountSyncJobs(ctx context.Context) error {
 	return nil
 }
 
-// processEmailSyncJobs processes pending email sync jobs (round-robin by priority)
+// processEmailSyncJobs processes pending and failed email sync jobs (round-robin)
 func (w *Watcher) processEmailSyncJobs(ctx context.Context) error {
-	// Fetch only 1 job at a time for round-robin behavior
-	jobs, err := w.emailJobRepo.GetPendingJobs(ctx, 1)
+	// Fetch 1 pending job for round-robin behavior
+	pendingJobs, err := w.emailJobRepo.GetPendingJobs(ctx, 1)
 	if err != nil {
 		return err
 	}
 
-	if len(jobs) == 0 {
+	// If no pending, try failed jobs
+	if len(pendingJobs) == 0 {
+		failedJobs, err := w.emailJobRepo.GetFailedJobs(ctx, 1)
+		if err != nil {
+			return err
+		}
+
+		if len(failedJobs) == 0 {
+			return nil
+		}
+
+		job := failedJobs[0]
+		log.Printf("Retrying failed email sync job: %s (account: %s, attempts: %d)", job.ID, job.AccountID, job.Attempts)
+
+		if err := w.processEmailJob(ctx, job); err != nil {
+			log.Printf("Failed to process email job %s: %v", job.ID, err)
+		}
+
 		return nil
 	}
 
-	job := jobs[0]
+	job := pendingJobs[0]
 	log.Printf("Found email sync job: %s (account: %s, last_synced: %v)", job.ID, job.AccountID, job.LastSyncedAt)
 
 	if err := w.processEmailJob(ctx, job); err != nil {

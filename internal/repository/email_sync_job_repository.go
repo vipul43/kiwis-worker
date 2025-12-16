@@ -39,6 +39,27 @@ func (r *EmailSyncJobRepository) GetPendingJobs(ctx context.Context, limit int) 
 	return r.scanJobs(rows)
 }
 
+// GetFailedJobs retrieves failed email sync jobs for retry in round-robin order
+func (r *EmailSyncJobRepository) GetFailedJobs(ctx context.Context, limit int) ([]models.EmailSyncJob, error) {
+	query := `
+		SELECT id, account_id, status, sync_type, emails_fetched, 
+		       page_token, last_synced_at, attempts, last_error, 
+		       created_at, updated_at, processed_at
+		FROM email_sync_job
+		WHERE status = $1
+		ORDER BY last_synced_at ASC NULLS FIRST, created_at ASC
+		LIMIT $2
+	`
+
+	rows, err := r.db.QueryContext(ctx, query, models.EmailStatusFailed, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query failed jobs: %w", err)
+	}
+	defer rows.Close()
+
+	return r.scanJobs(rows)
+}
+
 // Create creates a new email sync job
 func (r *EmailSyncJobRepository) Create(ctx context.Context, job models.EmailSyncJob) error {
 	query := `
