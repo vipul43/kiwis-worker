@@ -1,4 +1,4 @@
-.PHONY: help build run migrate-up migrate-down clean
+.PHONY: help build run deps migrate-install migrate-up migrate-down migrate-status migrate-create fmt fmt-check lint-install lint test test-coverage ci clean
 
 # Load environment variables from .env file
 ifneq (,$(wildcard .env))
@@ -57,6 +57,15 @@ lint: lint-install ## Run linter using golangci-lint
 	@$(shell go env GOPATH)/bin/golangci-lint run ./...
 	@echo "✅ Linting complete"
 
+fmt-check: ## Check if code is formatted (for CI)
+	@echo "Checking code formatting..."
+	@if [ -n "$$(gofmt -l .)" ]; then \
+		echo "❌ Code is not formatted. Run 'make fmt' to fix:"; \
+		gofmt -l .; \
+		exit 1; \
+	fi
+	@echo "✅ Code is properly formatted"
+
 test: ## Run all tests
 	go test -v ./...
 
@@ -64,6 +73,9 @@ test-coverage: ## Run tests with coverage report
 	go test -v -coverprofile=coverage.out ./...
 	go tool cover -html=coverage.out -o coverage.html
 	@echo "✅ Coverage report generated: coverage.html"
+
+ci: deps fmt-check lint test build ## Run all CI checks (format, lint, test, build)
+	@echo "✅ All CI checks passed"
 
 clean: ## Clean build artifacts
 	rm -rf bin/ coverage.out coverage.html
