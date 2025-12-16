@@ -48,11 +48,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Database column naming convention to snake_case for PostgreSQL standards
+- **Database column naming: uses camelCase to match Prisma/frontend schema**
 - Status field from ENUM type to VARCHAR(50) with CHECK constraint for easier schema evolution
 - AccountProcessor now uses interface for better testability
 - **Watcher now handles both account sync and email sync jobs**
 - **Account setup creates email sync job after completion**
+- **All SQL queries use quoted camelCase column names (e.g., "accountId", "userId")**
 
 ### Technical
 

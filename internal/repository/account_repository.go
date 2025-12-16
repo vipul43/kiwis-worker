@@ -36,9 +36,9 @@ var ErrAccountNotFound = fmt.Errorf("account not found")
 // GetByID retrieves account by ID
 func (r *AccountRepository) GetByID(ctx context.Context, accountID string) (*Account, error) {
 	query := `
-		SELECT id, account_id, provider_id, user_id, access_token, refresh_token, 
-		       id_token, access_token_expires_at, refresh_token_expires_at, scope, password,
-		       created_at, updated_at
+		SELECT id, "accountId", "providerId", "userId", "accessToken", "refreshToken", 
+		       "idToken", "accessTokenExpiresAt", "refreshTokenExpiresAt", scope, password,
+		       "createdAt", "updatedAt"
 		FROM account
 		WHERE id = $1
 	`
@@ -73,10 +73,10 @@ func (r *AccountRepository) GetByID(ctx context.Context, accountID string) (*Acc
 func (r *AccountRepository) UpdateTokens(ctx context.Context, accountID string, accessToken string, refreshToken string, accessTokenExpiresAt time.Time) error {
 	query := `
 		UPDATE account
-		SET access_token = $1,
-		    refresh_token = $2,
-		    access_token_expires_at = $3,
-		    updated_at = $4
+		SET "accessToken" = $1,
+		    "refreshToken" = $2,
+		    "accessTokenExpiresAt" = $3,
+		    "updatedAt" = $4
 		WHERE id = $5
 	`
 
