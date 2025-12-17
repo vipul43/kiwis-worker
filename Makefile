@@ -1,11 +1,5 @@
 .PHONY: help build run deps migrate-install migrate-up migrate-down migrate-status migrate-create fmt fmt-check lint-install lint test test-coverage ci clean
 
-# Load environment variables from .env file
-ifneq (,$(wildcard .env))
-    include .env
-    export
-endif
-
 help: ## Show this help message
 	@echo 'Usage: make [target]'
 	@echo ''
@@ -28,18 +22,18 @@ migrate-install: ## Install golang-migrate CLI
 
 migrate-up: migrate-install ## Apply all pending migrations
 	@test -f .env || (echo "Error: .env file not found" && exit 1)
-	@test -n "$(DATABASE_URL)" || (echo "Error: DATABASE_URL not set in .env" && exit 1)
-	migrate -path migrations -database "$(DATABASE_URL)" up
+	@bash -c 'source .env && test -n "$$DATABASE_URL" || (echo "Error: DATABASE_URL not set in .env" && exit 1)'
+	@bash -c 'source .env && migrate -path migrations -database "$$DATABASE_URL" up'
 
 migrate-down: migrate-install ## Rollback last migration
 	@test -f .env || (echo "Error: .env file not found" && exit 1)
-	@test -n "$(DATABASE_URL)" || (echo "Error: DATABASE_URL not set in .env" && exit 1)
-	migrate -path migrations -database "$(DATABASE_URL)" down 1
+	@bash -c 'source .env && test -n "$$DATABASE_URL" || (echo "Error: DATABASE_URL not set in .env" && exit 1)'
+	@bash -c 'source .env && migrate -path migrations -database "$$DATABASE_URL" down 1'
 
 migrate-status: migrate-install ## Show current migration version
 	@test -f .env || (echo "Error: .env file not found" && exit 1)
-	@test -n "$(DATABASE_URL)" || (echo "Error: DATABASE_URL not set in .env" && exit 1)
-	migrate -path migrations -database "$(DATABASE_URL)" version
+	@bash -c 'source .env && test -n "$$DATABASE_URL" || (echo "Error: DATABASE_URL not set in .env" && exit 1)'
+	@bash -c 'source .env && migrate -path migrations -database "$$DATABASE_URL" version'
 
 migrate-create: migrate-install ## Create a new migration (usage: make migrate-create name=migration_name)
 	migrate create -ext sql -dir migrations -seq $(name)
