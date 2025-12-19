@@ -92,7 +92,9 @@ func (r *EmailRepository) BulkCreate(ctx context.Context, emails []models.Email)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		_ = tx.Rollback() // Rollback is safe to call even after commit
+	}()
 
 	stmt, err := tx.PrepareContext(ctx, `
 		INSERT INTO email (
