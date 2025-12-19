@@ -60,6 +60,27 @@ func (r *EmailSyncJobRepository) GetFailedJobs(ctx context.Context, limit int) (
 	return r.scanJobs(rows)
 }
 
+// GetProcessingJobs retrieves email sync jobs stuck in processing state
+func (r *EmailSyncJobRepository) GetProcessingJobs(ctx context.Context, limit int) ([]models.EmailSyncJob, error) {
+	query := `
+		SELECT id, account_id, status, sync_type, emails_fetched, 
+		       page_token, last_synced_at, attempts, last_error, 
+		       created_at, updated_at, processed_at
+		FROM email_sync_job
+		WHERE status = $1
+		ORDER BY last_synced_at ASC NULLS FIRST, created_at ASC
+		LIMIT $2
+	`
+
+	rows, err := r.db.QueryContext(ctx, query, models.EmailStatusProcessing, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query processing jobs: %w", err)
+	}
+	defer rows.Close()
+
+	return r.scanJobs(rows)
+}
+
 // Create creates a new email sync job
 func (r *EmailSyncJobRepository) Create(ctx context.Context, job models.EmailSyncJob) error {
 	query := `
@@ -176,4 +197,39 @@ func (r *EmailSyncJobRepository) scanJobs(rows *sql.Rows) ([]models.EmailSyncJob
 	}
 
 	return jobs, nil
+}
+
+// GetByID retrieves an email sync job by ID
+func (r *EmailSyncJobRepository) GetByID(ctx context.Context, jobID string) (*models.EmailSyncJob, error) {
+	query := `
+		SELECT id, account_id, status, sync_type, emails_fetched, 
+		       page_token, last_synced_at, attempts, last_error, 
+		       created_at, updated_at, processed_at
+		FROM email_sync_job
+		WHERE id = $1
+	`
+
+	var job models.EmailSyncJob
+	err := r.db.QueryRowContext(ctx, query, jobID).Scan(
+		&job.ID,
+		&job.AccountID,
+		&job.Status,
+		&job.SyncType,
+		&job.EmailsFetched,
+		&job.PageToken,
+		&job.LastSyncedAt,
+		&job.Attempts,
+		&job.LastError,
+		&job.CreatedAt,
+		&job.UpdatedAt,
+		&job.ProcessedAt,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("job not found")
+		}
+		return nil, fmt.Errorf("failed to get job: %w", err)
+	}
+
+	return &job, nil
 }

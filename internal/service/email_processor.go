@@ -20,6 +20,7 @@ const (
 type EmailProcessor struct {
 	accountRepo      *repository.AccountRepository
 	emailSyncJobRepo *repository.EmailSyncJobRepository
+	emailRepo        *repository.EmailRepository
 	gmailClient      GmailClient // Interface for Gmail API
 }
 
@@ -36,12 +37,23 @@ type EmailFetchResult struct {
 }
 
 type EmailMessage struct {
-	ID       string
-	ThreadID string
-	Subject  string
-	From     string
-	Date     time.Time
-	Body     string
+	ID             string
+	ThreadID       string
+	Subject        string
+	From           string
+	To             string
+	CC             string
+	BCC            string
+	Date           time.Time
+	InternalDate   time.Time
+	BodyText       string
+	BodyHTML       string
+	Snippet        string
+	Labels         []string
+	RawHeaders     map[string]interface{}
+	RawPayload     map[string]interface{}
+	HasAttachments bool
+	Attachments    []map[string]interface{}
 }
 
 type TokenRefreshResult struct {
@@ -53,17 +65,20 @@ type TokenRefreshResult struct {
 func NewEmailProcessor(
 	accountRepo *repository.AccountRepository,
 	emailSyncJobRepo *repository.EmailSyncJobRepository,
+	emailRepo *repository.EmailRepository,
 	gmailClient GmailClient,
 ) *EmailProcessor {
 	return &EmailProcessor{
 		accountRepo:      accountRepo,
 		emailSyncJobRepo: emailSyncJobRepo,
+		emailRepo:        emailRepo,
 		gmailClient:      gmailClient,
 	}
 }
 
 // ProcessEmailSyncJob processes a single email sync job
-func (p *EmailProcessor) ProcessEmailSyncJob(ctx context.Context, job models.EmailSyncJob) error {
+// Updates the job object in-place with new values after successful processing
+func (p *EmailProcessor) ProcessEmailSyncJob(ctx context.Context, job *models.EmailSyncJob) error {
 	log.Printf("Processing email sync job %s for account %s (type: %s, fetched: %d)",
 		job.ID, job.AccountID, job.SyncType, job.EmailsFetched)
 
@@ -90,7 +105,7 @@ func (p *EmailProcessor) ProcessEmailSyncJob(ctx context.Context, job models.Ema
 	}
 
 	// Build Gmail query based on sync type
-	query := p.buildGmailQuery(job)
+	query := p.buildGmailQuery(*job)
 
 	// Determine how many emails to fetch in this batch
 	remainingEmails := MaxEmailsPerAccount - job.EmailsFetched
@@ -119,10 +134,42 @@ func (p *EmailProcessor) ProcessEmailSyncJob(ctx context.Context, job models.Ema
 
 	log.Printf("Fetched %d emails for account %s", len(result.Messages), job.AccountID)
 
-	// TODO: Store emails in database (placeholder for now)
-	// This will be implemented when we add the emails table
-	for _, msg := range result.Messages {
-		log.Printf("  - Email: %s | From: %s | Date: %s", msg.Subject, msg.From, msg.Date.Format("2006-01-02"))
+	// Store emails in database for LLM fine-tuning
+	if len(result.Messages) > 0 {
+		emails := make([]models.Email, 0, len(result.Messages))
+		for _, msg := range result.Messages {
+			email := models.Email{
+				ID:             uuid.New().String(),
+				AccountID:      job.AccountID,
+				GmailMessageID: msg.ID,
+				GmailThreadID:  stringPtr(msg.ThreadID),
+				From:           stringPtr(msg.From),
+				To:             stringPtr(msg.To),
+				CC:             stringPtr(msg.CC),
+				BCC:            stringPtr(msg.BCC),
+				Subject:        stringPtr(msg.Subject),
+				BodyText:       stringPtr(msg.BodyText),
+				BodyHTML:       stringPtr(msg.BodyHTML),
+				Snippet:        stringPtr(msg.Snippet),
+				ReceivedAt:     timePtr(msg.Date),
+				InternalDate:   timePtr(msg.InternalDate),
+				Labels:         msg.Labels,
+				RawHeaders:     msg.RawHeaders,
+				RawPayload:     msg.RawPayload,
+				HasAttachments: msg.HasAttachments,
+				Attachments:    msg.Attachments,
+				CreatedAt:      time.Now(),
+				UpdatedAt:      time.Now(),
+			}
+			emails = append(emails, email)
+			log.Printf("  - Email: %s | From: %s | Date: %s", msg.Subject, msg.From, msg.Date.Format("2006-01-02"))
+		}
+
+		// Bulk insert emails
+		if err := p.emailRepo.BulkCreate(ctx, emails); err != nil {
+			return fmt.Errorf("failed to store emails: %w", err)
+		}
+		log.Printf("Stored %d emails in database", len(emails))
 	}
 
 	// Update job progress
@@ -136,6 +183,10 @@ func (p *EmailProcessor) ProcessEmailSyncJob(ctx context.Context, job models.Ema
 	if err != nil {
 		return fmt.Errorf("failed to update job progress: %w", err)
 	}
+
+	// Update the job object in-place with new values (since DB update succeeded)
+	job.EmailsFetched = newEmailsFetched
+	job.PageToken = nextPageToken
 
 	log.Printf("Updated job %s: emails_fetched=%d, has_more=%v", job.ID, newEmailsFetched, nextPageToken != nil)
 
@@ -215,4 +266,19 @@ func (p *EmailProcessor) CreateInitialEmailSyncJob(ctx context.Context, accountI
 
 	log.Printf("Created initial email sync job %s for account %s (will be picked first)", job.ID, accountID)
 	return nil
+}
+
+// Helper functions for pointer conversion
+func stringPtr(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
+}
+
+func timePtr(t time.Time) *time.Time {
+	if t.IsZero() {
+		return nil
+	}
+	return &t
 }

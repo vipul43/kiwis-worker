@@ -79,86 +79,143 @@ func (c *Client) FetchEmails(ctx context.Context, accessToken string, query stri
 	}, nil
 }
 
-// parseMessage parses Gmail message into EmailMessage struct
+// parseMessage parses Gmail message into EmailMessage struct with all fields
 func (c *Client) parseMessage(msg *gmail.Message) (service.EmailMessage, error) {
 	emailMsg := service.EmailMessage{
-		ID:       msg.Id,
-		ThreadID: msg.ThreadId,
+		ID:             msg.Id,
+		ThreadID:       msg.ThreadId,
+		Snippet:        msg.Snippet,
+		Labels:         msg.LabelIds,
+		RawHeaders:     make(map[string]interface{}),
+		RawPayload:     make(map[string]interface{}),
+		HasAttachments: false,
+		Attachments:    []map[string]interface{}{},
 	}
 
-	// Parse headers
+	// Parse internal date (milliseconds since epoch)
+	if msg.InternalDate > 0 {
+		emailMsg.InternalDate = time.UnixMilli(msg.InternalDate)
+	}
+
+	// Parse all headers and store in RawHeaders
 	for _, header := range msg.Payload.Headers {
+		emailMsg.RawHeaders[header.Name] = header.Value
+
 		switch header.Name {
 		case "Subject":
 			emailMsg.Subject = header.Value
 		case "From":
 			emailMsg.From = header.Value
+		case "To":
+			emailMsg.To = header.Value
+		case "Cc":
+			emailMsg.CC = header.Value
+		case "Bcc":
+			emailMsg.BCC = header.Value
 		case "Date":
-			// Parse date
 			parsedDate, err := parseEmailDate(header.Value)
 			if err != nil {
 				log.Printf("Warning: failed to parse date '%s': %v", header.Value, err)
-				emailMsg.Date = time.Now() // Fallback to now
 			} else {
 				emailMsg.Date = parsedDate
 			}
 		}
 	}
 
-	// Extract body
-	body, err := c.extractBody(msg.Payload)
-	if err != nil {
-		log.Printf("Warning: failed to extract body for message %s: %v", msg.Id, err)
+	// Extract body (text and HTML)
+	bodyText, bodyHTML := c.extractBodies(msg.Payload)
+	emailMsg.BodyText = bodyText
+	emailMsg.BodyHTML = bodyHTML
+
+	// Extract attachments info
+	attachments := c.extractAttachments(msg.Payload)
+	if len(attachments) > 0 {
+		emailMsg.HasAttachments = true
+		emailMsg.Attachments = attachments
 	}
-	emailMsg.Body = body
+
+	// Store raw payload structure (without actual attachment data)
+	emailMsg.RawPayload = map[string]interface{}{
+		"mimeType": msg.Payload.MimeType,
+		"filename": msg.Payload.Filename,
+		"partId":   msg.Payload.PartId,
+	}
 
 	return emailMsg, nil
 }
 
-// extractBody extracts email body from message payload
-func (c *Client) extractBody(payload *gmail.MessagePart) (string, error) {
+// extractBodies extracts both text and HTML bodies from message payload
+func (c *Client) extractBodies(payload *gmail.MessagePart) (string, string) {
+	var textPlain, textHTML string
+
 	// Check if body is in the main payload
 	if payload.Body != nil && payload.Body.Data != "" {
 		decoded, err := base64.URLEncoding.DecodeString(payload.Body.Data)
-		if err != nil {
-			return "", fmt.Errorf("failed to decode body: %w", err)
+		if err == nil {
+			switch payload.MimeType {
+			case "text/plain":
+				textPlain = string(decoded)
+			case "text/html":
+				textHTML = string(decoded)
+			}
 		}
-		return string(decoded), nil
 	}
 
-	// Check parts for text/plain or text/html
-	var textPlain, textHTML string
-	for _, part := range payload.Parts {
-		if part.MimeType == "text/plain" && part.Body != nil && part.Body.Data != "" {
+	// Recursively extract from parts
+	c.extractBodiesFromParts(payload.Parts, &textPlain, &textHTML)
+
+	return textPlain, textHTML
+}
+
+// extractBodiesFromParts recursively extracts text and HTML from message parts
+func (c *Client) extractBodiesFromParts(parts []*gmail.MessagePart, textPlain, textHTML *string) {
+	for _, part := range parts {
+		if part.Body != nil && part.Body.Data != "" {
 			decoded, err := base64.URLEncoding.DecodeString(part.Body.Data)
 			if err == nil {
-				textPlain = string(decoded)
-			}
-		} else if part.MimeType == "text/html" && part.Body != nil && part.Body.Data != "" {
-			decoded, err := base64.URLEncoding.DecodeString(part.Body.Data)
-			if err == nil {
-				textHTML = string(decoded)
+				if part.MimeType == "text/plain" && *textPlain == "" {
+					*textPlain = string(decoded)
+				} else if part.MimeType == "text/html" && *textHTML == "" {
+					*textHTML = string(decoded)
+				}
 			}
 		}
 
 		// Recursively check nested parts
 		if len(part.Parts) > 0 {
-			nestedBody, _ := c.extractBody(part)
-			if nestedBody != "" && textPlain == "" {
-				textPlain = nestedBody
-			}
+			c.extractBodiesFromParts(part.Parts, textPlain, textHTML)
 		}
 	}
+}
 
-	// Prefer text/plain over text/html
-	if textPlain != "" {
-		return textPlain, nil
-	}
-	if textHTML != "" {
-		return textHTML, nil
-	}
+// extractAttachments extracts attachment metadata from message payload
+func (c *Client) extractAttachments(payload *gmail.MessagePart) []map[string]interface{} {
+	attachments := []map[string]interface{}{}
+	c.extractAttachmentsFromParts(payload.Parts, &attachments)
+	return attachments
+}
 
-	return "", fmt.Errorf("no body found")
+// extractAttachmentsFromParts recursively extracts attachment info from parts
+func (c *Client) extractAttachmentsFromParts(parts []*gmail.MessagePart, attachments *[]map[string]interface{}) {
+	for _, part := range parts {
+		// Check if this part is an attachment
+		if part.Filename != "" && part.Body != nil {
+			attachment := map[string]interface{}{
+				"filename": part.Filename,
+				"mimeType": part.MimeType,
+				"size":     part.Body.Size,
+			}
+			if part.Body.AttachmentId != "" {
+				attachment["attachmentId"] = part.Body.AttachmentId
+			}
+			*attachments = append(*attachments, attachment)
+		}
+
+		// Recursively check nested parts
+		if len(part.Parts) > 0 {
+			c.extractAttachmentsFromParts(part.Parts, attachments)
+		}
+	}
 }
 
 // RefreshAccessToken refreshes the OAuth2 access token

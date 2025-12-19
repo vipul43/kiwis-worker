@@ -49,13 +49,14 @@ func run() error {
 	accountJobRepo := repository.NewAccountSyncJobRepository(db)
 	emailJobRepo := repository.NewEmailSyncJobRepository(db)
 	accountRepo := repository.NewAccountRepository(db)
+	emailRepo := repository.NewEmailRepository(db)
 
 	// Initialize services
 	accountProcessor := service.NewAccountProcessor(accountRepo)
 
 	// Initialize Gmail client
 	gmailClient := gmail.NewClient(cfg.GmailClientID, cfg.GmailClientSecret)
-	emailProcessor := service.NewEmailProcessor(accountRepo, emailJobRepo, gmailClient)
+	emailProcessor := service.NewEmailProcessor(accountRepo, emailJobRepo, emailRepo, gmailClient)
 
 	// Initialize watcher
 	w := watcher.New(cfg, accountJobRepo, emailJobRepo, accountProcessor, emailProcessor)

@@ -71,8 +71,11 @@ GMAIL_CLIENT_SECRET="GOCSPX-xyz123"
 
 Defaults (in code):
 - Poll interval: 10 seconds
-- Max retries: 3
+- Infinite retries (no max limit)
 - Shutdown timeout: 30 seconds
+- Email batch size: 50 emails per fetch
+- Max emails per account: 10,000
+- Historical sync: 1 year of emails
 
 ## Database Schema
 
@@ -84,9 +87,26 @@ Defaults (in code):
 
 ### Account Sync Job Table
 - `id`, `account_id` (unique, FK to account)
-- `status` (VARCHAR with CHECK constraint: pending/processing/completed/failed)
+- `status` (VARCHAR: pending/processing/completed/failed)
 - `attempts`, `last_error`
 - `created_at`, `updated_at`, `processed_at`
+
+### Email Sync Job Table
+- `id`, `account_id` (FK to account)
+- `status` (VARCHAR: pending/processing/synced/failed)
+- `sync_type` (VARCHAR: initial/incremental/webhook)
+- `emails_fetched`, `page_token`, `last_synced_at`
+- `attempts`, `last_error`
+- `created_at`, `updated_at`, `processed_at`
+
+### Email Table (for LLM fine-tuning)
+- `id`, `account_id`, `gmail_message_id` (unique)
+- `from`, `to`, `cc`, `bcc`, `subject`
+- `body_text`, `body_html`, `snippet`
+- `received_at`, `internal_date`, `labels`
+- `raw_headers` (JSONB), `raw_payload` (JSONB)
+- `has_attachments`, `attachments` (JSONB)
+- No foreign keys (standalone table for training data)
 
 **Note**: Status is stored as VARCHAR (not enum) for easier schema evolution, with CHECK constraint for validation.
 
@@ -197,15 +217,28 @@ Successfully completed job <id>
 
 ### Job Lifecycle
 ```
-pending → processing → pending → processing → ... → synced
-                                                      ↓
-                                            (webhook creates new job)
+pending → processing → processing → ... → synced
+   ↓           ↓
+failed ←  failed
+   ↓
+processing (retry)
 ```
 
-- **pending**: Ready to fetch next batch
-- **processing**: Currently fetching
-- **synced**: All historical emails fetched, waiting for webhook
-- **failed**: Failed after max retries, skipped until manually reset
+**State Transitions:**
+- **pending → processing**: Watcher picks job
+- **processing → processing**: Partial success (more pages to fetch)
+- **processing → synced**: Complete success (all emails fetched)
+- **processing → failed**: Error during processing
+- **failed → processing**: Watcher picks failed job for retry
+
+**Key Points:**
+- Partial success stays in `processing` (not pending)
+- All failures go to `failed` status
+- `last_synced_at` updated on both success AND failure (prevents queue blocking)
+- Watcher fetches `pending`, `failed`, AND `processing` jobs
+- Jobs stuck in `processing` (from crashes) are automatically retried
+- Infinite retry: failed jobs are picked up again in next cycle
+- Round-robin fairness: oldest `last_synced_at` (or NULL) gets picked first
 
 ### Round-Robin Fairness
 - After processing, `last_synced_at` is updated to NOW()
@@ -237,18 +270,24 @@ pending → processing → pending → processing → ... → synced
    - ✅ Gmail messages.list API (with pagination)
    - ✅ Gmail messages.get API (full message details)
    - ✅ Email body extraction (text/plain and text/html)
+   - ✅ Email header extraction (from, to, cc, bcc, subject, date)
+   - ✅ Attachment metadata extraction
+   - ✅ Raw headers and payload storage (JSONB)
    - ✅ Email date parsing (multiple formats)
    - ✅ Token storage and updates in database
+   - ✅ Email storage in database for LLM fine-tuning
 
 ## Next Steps
 
-1. **Add emails table** for storing fetched emails
+1. ✅ ~~Add emails table for storing fetched emails~~ (Completed)
 
 2. **Implement AI payment extraction** from email content
 
 3. **Store extracted payments** in payments table
 
 4. **Setup Gmail webhook** for real-time email notifications
+
+5. **Remove email table** after LLM is sufficiently trained
 
 ## Technologies
 

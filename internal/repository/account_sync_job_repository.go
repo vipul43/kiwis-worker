@@ -55,6 +55,25 @@ func (r *AccountSyncJobRepository) GetFailedJobs(ctx context.Context, limit int)
 	return r.scanJobs(rows)
 }
 
+// GetProcessingJobs retrieves account sync jobs stuck in processing state
+func (r *AccountSyncJobRepository) GetProcessingJobs(ctx context.Context, limit int) ([]models.AccountSyncJob, error) {
+	query := `
+		SELECT id, account_id, status, attempts, last_error, created_at, updated_at, processed_at
+		FROM account_sync_job
+		WHERE status = $1
+		ORDER BY created_at ASC
+		LIMIT $2
+	`
+
+	rows, err := r.db.QueryContext(ctx, query, models.StatusProcessing, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query processing jobs: %w", err)
+	}
+	defer rows.Close()
+
+	return r.scanJobs(rows)
+}
+
 // UpdateStatus updates the job status
 func (r *AccountSyncJobRepository) UpdateStatus(ctx context.Context, jobID string, status models.AccountSyncStatus, lastError *string) error {
 	query := `

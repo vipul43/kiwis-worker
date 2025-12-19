@@ -2,10 +2,12 @@ package watcher
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
 	"github.com/vipul43/kiwis-worker/internal/config"
+	"github.com/vipul43/kiwis-worker/internal/models"
 	"github.com/vipul43/kiwis-worker/internal/repository"
 	"github.com/vipul43/kiwis-worker/internal/service"
 )
@@ -75,7 +77,7 @@ func (w *Watcher) processAllPendingJobs(ctx context.Context) error {
 	return nil
 }
 
-// processAccountSyncJobs processes pending and failed account sync jobs
+// processAccountSyncJobs processes pending, failed, and processing account sync jobs
 func (w *Watcher) processAccountSyncJobs(ctx context.Context) error {
 	// Get pending jobs
 	pendingJobs, err := w.accountJobRepo.GetPendingJobs(ctx, 5)
@@ -89,8 +91,15 @@ func (w *Watcher) processAccountSyncJobs(ctx context.Context) error {
 		return err
 	}
 
-	// Combine both lists
+	// Get processing jobs (stuck jobs from crashes or errors)
+	processingJobs, err := w.accountJobRepo.GetProcessingJobs(ctx, 5)
+	if err != nil {
+		return err
+	}
+
+	// Combine all lists
 	jobs := append(pendingJobs, failedJobs...)
+	jobs = append(jobs, processingJobs...)
 
 	if len(jobs) == 0 {
 		return nil
@@ -107,37 +116,45 @@ func (w *Watcher) processAccountSyncJobs(ctx context.Context) error {
 	return nil
 }
 
-// processEmailSyncJobs processes pending and failed email sync jobs (round-robin)
+// processEmailSyncJobs processes pending, failed, and processing email sync jobs (round-robin)
 func (w *Watcher) processEmailSyncJobs(ctx context.Context) error {
-	// Fetch 1 pending job for round-robin behavior
+	// Fetch pending jobs
 	pendingJobs, err := w.emailJobRepo.GetPendingJobs(ctx, 1)
 	if err != nil {
 		return err
 	}
 
-	// If no pending, try failed jobs
-	if len(pendingJobs) == 0 {
-		failedJobs, err := w.emailJobRepo.GetFailedJobs(ctx, 1)
-		if err != nil {
-			return err
-		}
+	// Fetch failed jobs
+	failedJobs, err := w.emailJobRepo.GetFailedJobs(ctx, 1)
+	if err != nil {
+		return err
+	}
 
-		if len(failedJobs) == 0 {
-			return nil
-		}
+	// Fetch processing jobs (stuck jobs)
+	processingJobs, err := w.emailJobRepo.GetProcessingJobs(ctx, 1)
+	if err != nil {
+		return err
+	}
 
-		job := failedJobs[0]
-		log.Printf("Retrying failed email sync job: %s (account: %s, attempts: %d)", job.ID, job.AccountID, job.Attempts)
+	// Combine all jobs (already sorted by last_synced_at in individual queries)
+	allJobs := append(pendingJobs, failedJobs...)
+	allJobs = append(allJobs, processingJobs...)
 
-		if err := w.processEmailJob(ctx, job); err != nil {
-			log.Printf("Failed to process email job %s: %v", job.ID, err)
-		}
-
+	if len(allJobs) == 0 {
 		return nil
 	}
 
-	job := pendingJobs[0]
-	log.Printf("Found email sync job: %s (account: %s, last_synced: %v)", job.ID, job.AccountID, job.LastSyncedAt)
+	// Pick the first job (queries already sort by last_synced_at ASC NULLS FIRST)
+	job := allJobs[0]
+
+	statusMsg := ""
+	if job.Status == models.EmailStatusProcessing {
+		statusMsg = " (stuck in processing)"
+	} else if job.Status == models.EmailStatusFailed {
+		statusMsg = fmt.Sprintf(" (failed, attempt %d)", job.Attempts)
+	}
+
+	log.Printf("Found email sync job: %s (account: %s, status: %s%s)", job.ID, job.AccountID, job.Status, statusMsg)
 
 	if err := w.processEmailJob(ctx, job); err != nil {
 		log.Printf("Failed to process email job %s: %v", job.ID, err)
