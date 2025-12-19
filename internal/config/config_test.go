@@ -6,9 +6,13 @@ import (
 )
 
 func TestLoad_Success(t *testing.T) {
-	// Set required env var
+	// Set required env vars
 	os.Setenv("DATABASE_URL", "postgres://test:test@localhost:5432/test")
+	os.Setenv("GMAIL_CLIENT_ID", "test-client-id")
+	os.Setenv("GMAIL_CLIENT_SECRET", "test-client-secret")
 	defer os.Unsetenv("DATABASE_URL")
+	defer os.Unsetenv("GMAIL_CLIENT_ID")
+	defer os.Unsetenv("GMAIL_CLIENT_SECRET")
 
 	cfg, err := Load()
 	if err != nil {
@@ -17,6 +21,14 @@ func TestLoad_Success(t *testing.T) {
 
 	if cfg.DatabaseURL != "postgres://test:test@localhost:5432/test" {
 		t.Errorf("expected DATABASE_URL to be set, got %s", cfg.DatabaseURL)
+	}
+
+	if cfg.GmailClientID != "test-client-id" {
+		t.Errorf("expected GmailClientID to be set, got %s", cfg.GmailClientID)
+	}
+
+	if cfg.GmailClientSecret != "test-client-secret" {
+		t.Errorf("expected GmailClientSecret to be set, got %s", cfg.GmailClientSecret)
 	}
 
 	// Check defaults

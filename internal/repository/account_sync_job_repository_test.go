@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
-	"github.com/yourusername/payment-tracker/internal/models"
+	"github.com/vipul43/kiwis-worker/internal/models"
 )
 
 func TestAccountSyncJobRepository_GetPendingJobs_Success(t *testing.T) {

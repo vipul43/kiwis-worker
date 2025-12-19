@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/yourusername/payment-tracker/internal/models"
+	"github.com/vipul43/kiwis-worker/internal/models"
 )
 
 type AccountSyncJobRepository struct {
@@ -30,6 +30,44 @@ func (r *AccountSyncJobRepository) GetPendingJobs(ctx context.Context, limit int
 	rows, err := r.db.QueryContext(ctx, query, models.StatusPending, limit)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query pending jobs: %w", err)
+	}
+	defer rows.Close()
+
+	return r.scanJobs(rows)
+}
+
+// GetFailedJobs retrieves all failed account sync jobs for retry
+func (r *AccountSyncJobRepository) GetFailedJobs(ctx context.Context, limit int) ([]models.AccountSyncJob, error) {
+	query := `
+		SELECT id, account_id, status, attempts, last_error, created_at, updated_at, processed_at
+		FROM account_sync_job
+		WHERE status = $1
+		ORDER BY created_at ASC
+		LIMIT $2
+	`
+
+	rows, err := r.db.QueryContext(ctx, query, models.StatusFailed, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query failed jobs: %w", err)
+	}
+	defer rows.Close()
+
+	return r.scanJobs(rows)
+}
+
+// GetProcessingJobs retrieves account sync jobs stuck in processing state
+func (r *AccountSyncJobRepository) GetProcessingJobs(ctx context.Context, limit int) ([]models.AccountSyncJob, error) {
+	query := `
+		SELECT id, account_id, status, attempts, last_error, created_at, updated_at, processed_at
+		FROM account_sync_job
+		WHERE status = $1
+		ORDER BY created_at ASC
+		LIMIT $2
+	`
+
+	rows, err := r.db.QueryContext(ctx, query, models.StatusProcessing, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query processing jobs: %w", err)
 	}
 	defer rows.Close()
 

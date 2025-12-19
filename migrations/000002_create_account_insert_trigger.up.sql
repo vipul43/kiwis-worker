@@ -1,4 +1,5 @@
 -- Function to create account sync job on account insert
+-- Uses gen_random_uuid() for UUID generation
 CREATE OR REPLACE FUNCTION create_account_sync_job()
 RETURNS TRIGGER AS $$
 BEGIN

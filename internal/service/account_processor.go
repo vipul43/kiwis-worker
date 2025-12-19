@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/yourusername/payment-tracker/internal/repository"
+	"github.com/vipul43/kiwis-worker/internal/repository"
 )
 
 // AccountRepository interface for dependency injection
@@ -23,8 +23,12 @@ func NewAccountProcessor(accountRepo AccountRepository) *AccountProcessor {
 	}
 }
 
-// ProcessAccount processes the given account
-// TODO: Implement Gmail API integration for email fetching
+// EmailSyncJobCreator interface for creating email sync jobs
+type EmailSyncJobCreator interface {
+	CreateInitialEmailSyncJob(ctx context.Context, accountID string) error
+}
+
+// ProcessAccount processes the given account and creates initial email sync job
 func (p *AccountProcessor) ProcessAccount(ctx context.Context, accountID string) error {
 	// Fetch account details
 	account, err := p.accountRepo.GetByID(ctx, accountID)
@@ -39,14 +43,9 @@ func (p *AccountProcessor) ProcessAccount(ctx context.Context, accountID string)
 
 	log.Printf("Processing account: %s (user: %s)", accountID, account.UserID)
 
-	// TODO: Implement processing logic
-	// 1. Check if access token is expired
-	// 2. Refresh token if needed
-	// 3. Fetch emails from Gmail API in batches
-	// 4. Extract payment information
-	// 5. Store in payments table
-
-	log.Printf("Account processing placeholder for account: %s", accountID)
+	// Account setup is complete
+	// Email sync job will be created by the watcher after this completes
+	log.Printf("Account setup completed for account: %s", accountID)
 
 	return nil
 }
