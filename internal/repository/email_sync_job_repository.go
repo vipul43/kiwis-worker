@@ -129,6 +129,7 @@ func (r *EmailSyncJobRepository) UpdateProgress(ctx context.Context, jobID strin
 
 // UpdateStatus updates the job status
 // For synced/completed/failed status, sets processed_at
+// For processing status, clears processed_at
 func (r *EmailSyncJobRepository) UpdateStatus(ctx context.Context, jobID string, status models.EmailSyncStatus, lastError *string) error {
 	query := `
 		UPDATE email_sync_job
@@ -136,13 +137,16 @@ func (r *EmailSyncJobRepository) UpdateStatus(ctx context.Context, jobID string,
 		WHERE id = $5
 	`
 
+	now := time.Now()
 	var processedAt *time.Time
+
+	// Set processed_at for terminal states (synced, completed, failed)
+	// Clear it for processing state (job is being worked on)
 	if status == models.EmailStatusSynced || status == models.EmailStatusCompleted || status == models.EmailStatusFailed {
-		now := time.Now()
 		processedAt = &now
 	}
 
-	_, err := r.db.ExecContext(ctx, query, status, lastError, time.Now(), processedAt, jobID)
+	_, err := r.db.ExecContext(ctx, query, status, lastError, now, processedAt, jobID)
 	if err != nil {
 		return fmt.Errorf("failed to update job status: %w", err)
 	}

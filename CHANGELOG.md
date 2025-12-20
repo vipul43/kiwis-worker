@@ -141,3 +141,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Gmail query now excludes CC'ed emails using `deliveredto:me` filter
 - Only fetches emails where user is primary recipient (in "To" field)
 - Prevents processing of emails where user is only CC'ed
+- Email sync job `processed_at` now correctly updates when job completes (synced/completed/failed status)
+- Gmail date parsing now handles timezone names in parentheses (e.g., "Fri, 12 Dec 2025 09:49:36 +0000 (UTC)")
+- Date parser strips timezone name suffix before parsing to prevent "unable to parse date" errors

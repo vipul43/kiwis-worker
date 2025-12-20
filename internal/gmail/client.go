@@ -340,6 +340,12 @@ func parseEmailDate(dateStr string) (time.Time, error) {
 	// Clean up the date string
 	dateStr = strings.TrimSpace(dateStr)
 
+	// Remove timezone name in parentheses (e.g., "(UTC)", "(PST)")
+	// Gmail sometimes adds this after the numeric offset
+	if idx := strings.Index(dateStr, " ("); idx != -1 {
+		dateStr = dateStr[:idx]
+	}
+
 	for _, format := range formats {
 		if t, err := time.Parse(format, dateStr); err == nil {
 			return t, nil
