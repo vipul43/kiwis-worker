@@ -61,12 +61,14 @@ Edit `.env`:
 - `DATABASE_URL`: PostgreSQL connection string (required)
 - `GMAIL_CLIENT_ID`: Google OAuth client ID (required for Gmail API)
 - `GMAIL_CLIENT_SECRET`: Google OAuth client secret (required for Gmail API)
+- `OPENROUTER_API_KEY`: OpenRouter API key (for payment extraction)
 
 Example:
 ```
 DATABASE_URL="postgres://user:password@localhost:5432/dbname?sslmode=disable"
 GMAIL_CLIENT_ID="123456-abc.apps.googleusercontent.com"
 GMAIL_CLIENT_SECRET="GOCSPX-xyz123"
+OPENROUTER_API_KEY="sk-or-v1-..."
 ```
 
 Defaults (in code):
@@ -98,15 +100,6 @@ Defaults (in code):
 - `emails_fetched`, `page_token`, `last_synced_at`
 - `attempts`, `last_error`
 - `created_at`, `updated_at`, `processed_at`
-
-### Email Table (for LLM fine-tuning)
-- `id`, `account_id`, `gmail_message_id` (unique)
-- `from`, `to`, `cc`, `bcc`, `subject`
-- `body_text`, `body_html`, `snippet`
-- `received_at`, `internal_date`, `labels`
-- `raw_headers` (JSONB), `raw_payload` (JSONB)
-- `has_attachments`, `attachments` (JSONB)
-- No foreign keys (standalone table for training data)
 
 **Note**: Status is stored as VARCHAR (not enum) for easier schema evolution, with CHECK constraint for validation.
 
@@ -272,22 +265,19 @@ processing (retry)
    - ✅ Email body extraction (text/plain and text/html)
    - ✅ Email header extraction (from, to, cc, bcc, subject, date)
    - ✅ Attachment metadata extraction
-   - ✅ Raw headers and payload storage (JSONB)
+   - ✅ Raw headers and payload parsing (JSONB)
    - ✅ Email date parsing (multiple formats)
    - ✅ Token storage and updates in database
-   - ✅ Email storage in database for LLM fine-tuning
 
 ## Next Steps
 
-1. ✅ ~~Add emails table for storing fetched emails~~ (Completed)
+1. **Implement LLM sync job table** for payment extraction tracking
 
-2. **Implement AI payment extraction** from email content
+2. **Implement AI payment extraction** from email content using OpenRouter
 
 3. **Store extracted payments** in payments table
 
 4. **Setup Gmail webhook** for real-time email notifications
-
-5. **Remove email table** after LLM is sufficiently trained
 
 ## Technologies
 

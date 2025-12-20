@@ -65,6 +65,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Round-robin: queries pre-sorted by last_synced_at, no additional sorting needed
 - Improved error messages: specific validation for missing access/refresh tokens
 
+### Removed
+
+- Email table and all email storage functionality (simplified architecture for payment extraction focus)
+- Environment-based configuration (no longer needed without email storage)
+- Email table migration files (000004_create_email_table.up.sql and .down.sql)
+- Email model (internal/models/email.go)
+- Email repository (internal/repository/email_repository.go)
+- Email storage logic from EmailProcessor
+- EmailProcessor dependencies: emailRepo and environment parameters
+- Configuration struct Environment field
+- ENVIRONMENT variable from .env and .env.example
+
+### Fixed
+
+- Email job handler now passes job by pointer to preserve in-place updates from ProcessEmailSyncJob
+
 ### Technical
 
 - Foreign key constraint with ON DELETE CASCADE

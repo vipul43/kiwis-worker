@@ -20,7 +20,6 @@ const (
 type EmailProcessor struct {
 	accountRepo      *repository.AccountRepository
 	emailSyncJobRepo *repository.EmailSyncJobRepository
-	emailRepo        *repository.EmailRepository
 	gmailClient      GmailClient // Interface for Gmail API
 }
 
@@ -65,13 +64,11 @@ type TokenRefreshResult struct {
 func NewEmailProcessor(
 	accountRepo *repository.AccountRepository,
 	emailSyncJobRepo *repository.EmailSyncJobRepository,
-	emailRepo *repository.EmailRepository,
 	gmailClient GmailClient,
 ) *EmailProcessor {
 	return &EmailProcessor{
 		accountRepo:      accountRepo,
 		emailSyncJobRepo: emailSyncJobRepo,
-		emailRepo:        emailRepo,
 		gmailClient:      gmailClient,
 	}
 }
@@ -134,42 +131,11 @@ func (p *EmailProcessor) ProcessEmailSyncJob(ctx context.Context, job *models.Em
 
 	log.Printf("Fetched %d emails for account %s", len(result.Messages), job.AccountID)
 
-	// Store emails in database for LLM fine-tuning
+	// Log email details
 	if len(result.Messages) > 0 {
-		emails := make([]models.Email, 0, len(result.Messages))
 		for _, msg := range result.Messages {
-			email := models.Email{
-				ID:             uuid.New().String(),
-				AccountID:      job.AccountID,
-				GmailMessageID: msg.ID,
-				GmailThreadID:  stringPtr(msg.ThreadID),
-				From:           stringPtr(msg.From),
-				To:             stringPtr(msg.To),
-				CC:             stringPtr(msg.CC),
-				BCC:            stringPtr(msg.BCC),
-				Subject:        stringPtr(msg.Subject),
-				BodyText:       stringPtr(msg.BodyText),
-				BodyHTML:       stringPtr(msg.BodyHTML),
-				Snippet:        stringPtr(msg.Snippet),
-				ReceivedAt:     timePtr(msg.Date),
-				InternalDate:   timePtr(msg.InternalDate),
-				Labels:         msg.Labels,
-				RawHeaders:     msg.RawHeaders,
-				RawPayload:     msg.RawPayload,
-				HasAttachments: msg.HasAttachments,
-				Attachments:    msg.Attachments,
-				CreatedAt:      time.Now(),
-				UpdatedAt:      time.Now(),
-			}
-			emails = append(emails, email)
 			log.Printf("  - Email: %s | From: %s | Date: %s", msg.Subject, msg.From, msg.Date.Format("2006-01-02"))
 		}
-
-		// Bulk insert emails
-		if err := p.emailRepo.BulkCreate(ctx, emails); err != nil {
-			return fmt.Errorf("failed to store emails: %w", err)
-		}
-		log.Printf("Stored %d emails in database", len(emails))
 	}
 
 	// Update job progress
