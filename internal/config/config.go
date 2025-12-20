@@ -14,6 +14,7 @@ type Config struct {
 	ShutdownTimeout   int // seconds
 	GmailClientID     string
 	GmailClientSecret string
+	OpenRouterAPIKey  string
 }
 
 // Load reads configuration from environment variables
@@ -32,6 +33,11 @@ func Load() (*Config, error) {
 		fmt.Println("Warning: GMAIL_CLIENT_ID or GMAIL_CLIENT_SECRET not set, Gmail API will not work")
 	}
 
+	openRouterAPIKey := os.Getenv("OPENROUTER_API_KEY")
+	if openRouterAPIKey == "" {
+		fmt.Println("Warning: OPENROUTER_API_KEY not set, LLM payment extraction will not work")
+	}
+
 	return &Config{
 		DatabaseURL:       dbURL,
 		PollInterval:      10, // poll every 10 seconds
@@ -39,5 +45,6 @@ func Load() (*Config, error) {
 		ShutdownTimeout:   30,
 		GmailClientID:     gmailClientID,
 		GmailClientSecret: gmailClientSecret,
+		OpenRouterAPIKey:  openRouterAPIKey,
 	}, nil
 }

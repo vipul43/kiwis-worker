@@ -20,13 +20,22 @@ const (
 type EmailProcessor struct {
 	accountRepo      *repository.AccountRepository
 	emailSyncJobRepo *repository.EmailSyncJobRepository
+	llmSyncJobRepo   *repository.LLMSyncJobRepository
 	gmailClient      GmailClient // Interface for Gmail API
 }
 
 // GmailClient interface for Gmail API operations
 type GmailClient interface {
+	FetchMessageIDs(ctx context.Context, accessToken string, query string, maxResults int, pageToken string) (*MessageIDFetchResult, error)
+	FetchEmailByID(ctx context.Context, accessToken string, messageID string) (*EmailMessage, error)
 	FetchEmails(ctx context.Context, accessToken string, query string, maxResults int, pageToken string) (*EmailFetchResult, error)
 	RefreshAccessToken(ctx context.Context, refreshToken string) (*TokenRefreshResult, error)
+}
+
+type MessageIDFetchResult struct {
+	MessageIDs    []string
+	NextPageToken string
+	TotalFetched  int
 }
 
 type EmailFetchResult struct {
@@ -64,11 +73,13 @@ type TokenRefreshResult struct {
 func NewEmailProcessor(
 	accountRepo *repository.AccountRepository,
 	emailSyncJobRepo *repository.EmailSyncJobRepository,
+	llmSyncJobRepo *repository.LLMSyncJobRepository,
 	gmailClient GmailClient,
 ) *EmailProcessor {
 	return &EmailProcessor{
 		accountRepo:      accountRepo,
 		emailSyncJobRepo: emailSyncJobRepo,
+		llmSyncJobRepo:   llmSyncJobRepo,
 		gmailClient:      gmailClient,
 	}
 }
@@ -122,24 +133,43 @@ func (p *EmailProcessor) ProcessEmailSyncJob(ctx context.Context, job *models.Em
 		pageToken = *job.PageToken
 	}
 
-	log.Printf("Fetching %d emails for account %s (page_token: %s)", batchSize, job.AccountID, pageToken)
+	log.Printf("Fetching %d message IDs for account %s (page_token: %s)", batchSize, job.AccountID, pageToken)
 
-	result, err := p.gmailClient.FetchEmails(ctx, accessToken, query, batchSize, pageToken)
+	result, err := p.gmailClient.FetchMessageIDs(ctx, accessToken, query, batchSize, pageToken)
 	if err != nil {
-		return fmt.Errorf("failed to fetch emails: %w", err)
+		return fmt.Errorf("failed to fetch message IDs: %w", err)
 	}
 
-	log.Printf("Fetched %d emails for account %s", len(result.Messages), job.AccountID)
+	log.Printf("Fetched %d message IDs for account %s", len(result.MessageIDs), job.AccountID)
 
-	// Log email details
-	if len(result.Messages) > 0 {
-		for _, msg := range result.Messages {
-			log.Printf("  - Email: %s | From: %s | Date: %s", msg.Subject, msg.From, msg.Date.Format("2006-01-02"))
+	// Create LLM sync jobs for each message ID
+	if len(result.MessageIDs) > 0 {
+		llmJobs := make([]models.LLMSyncJob, 0, len(result.MessageIDs))
+		now := time.Now()
+
+		for _, messageID := range result.MessageIDs {
+			llmJob := models.LLMSyncJob{
+				ID:           uuid.New().String(),
+				AccountID:    job.AccountID,
+				MessageID:    messageID,
+				Status:       models.LLMStatusPending,
+				LastSyncedAt: nil, // NULL = new job, gets priority in round-robin
+				Attempts:     0,
+				CreatedAt:    now,
+				UpdatedAt:    now,
+			}
+			llmJobs = append(llmJobs, llmJob)
 		}
+
+		// Bulk create LLM sync jobs
+		if err := p.llmSyncJobRepo.BulkCreate(ctx, llmJobs); err != nil {
+			return fmt.Errorf("failed to create LLM sync jobs: %w", err)
+		}
+		log.Printf("Created %d LLM sync jobs for account %s", len(llmJobs), job.AccountID)
 	}
 
 	// Update job progress
-	newEmailsFetched := job.EmailsFetched + len(result.Messages)
+	newEmailsFetched := job.EmailsFetched + len(result.MessageIDs)
 	var nextPageToken *string
 	if result.NextPageToken != "" {
 		nextPageToken = &result.NextPageToken

@@ -27,6 +27,75 @@ func NewClient(clientID, clientSecret string) *Client {
 	}
 }
 
+// FetchMessageIDs fetches only message IDs from Gmail API (lightweight, fast)
+func (c *Client) FetchMessageIDs(ctx context.Context, accessToken string, query string, maxResults int, pageToken string) (*service.MessageIDFetchResult, error) {
+	// Create OAuth2 token
+	token := &oauth2.Token{
+		AccessToken: accessToken,
+		TokenType:   "Bearer",
+	}
+
+	// Create Gmail service
+	gmailService, err := gmail.NewService(ctx, option.WithTokenSource(oauth2.StaticTokenSource(token)))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Gmail service: %w", err)
+	}
+
+	// List messages (only IDs, no full message fetch)
+	listCall := gmailService.Users.Messages.List("me").Q(query).MaxResults(int64(maxResults))
+	if pageToken != "" {
+		listCall = listCall.PageToken(pageToken)
+	}
+
+	listResp, err := listCall.Do()
+	if err != nil {
+		return nil, fmt.Errorf("failed to list messages: %w", err)
+	}
+
+	log.Printf("Gmail API returned %d message IDs (nextPageToken: %s)", len(listResp.Messages), listResp.NextPageToken)
+
+	// Extract message IDs
+	messageIDs := make([]string, 0, len(listResp.Messages))
+	for _, msg := range listResp.Messages {
+		messageIDs = append(messageIDs, msg.Id)
+	}
+
+	return &service.MessageIDFetchResult{
+		MessageIDs:    messageIDs,
+		NextPageToken: listResp.NextPageToken,
+		TotalFetched:  len(messageIDs),
+	}, nil
+}
+
+// FetchEmailByID fetches a single email by its Gmail message ID
+func (c *Client) FetchEmailByID(ctx context.Context, accessToken string, messageID string) (*service.EmailMessage, error) {
+	// Create OAuth2 token
+	token := &oauth2.Token{
+		AccessToken: accessToken,
+		TokenType:   "Bearer",
+	}
+
+	// Create Gmail service
+	gmailService, err := gmail.NewService(ctx, option.WithTokenSource(oauth2.StaticTokenSource(token)))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Gmail service: %w", err)
+	}
+
+	// Fetch full message by ID
+	fullMsg, err := gmailService.Users.Messages.Get("me", messageID).Format("full").Do()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get message: %w", err)
+	}
+
+	// Parse message
+	emailMsg, err := c.parseMessage(fullMsg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse message: %w", err)
+	}
+
+	return &emailMsg, nil
+}
+
 // FetchEmails fetches emails from Gmail API
 func (c *Client) FetchEmails(ctx context.Context, accessToken string, query string, maxResults int, pageToken string) (*service.EmailFetchResult, error) {
 	// Create OAuth2 token

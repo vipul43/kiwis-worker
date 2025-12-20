@@ -98,3 +98,83 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Email table: no foreign keys (standalone for LLM training data)
 - JSONB storage for raw headers, payload, and attachments
 - BulkCreate for efficient email insertion with ON CONFLICT DO NOTHING
+
+## LLM Payment Extraction Implementation
+
+### Added
+
+- LLM sync job table for tracking payment extraction from emails
+- Payment table for storing extracted payment information
+- Three-stage job pipeline: Account Sync → Email Sync → LLM Sync
+- OpenRouter client for LLM-based payment extraction
+- Batch processing: processes 100 LLM jobs at a time
+- Email sync now fetches only message IDs (lightweight, fast)
+- LLM sync fetches full emails on demand and sends to LLM
+- Payment extraction with validation of required fields
+- Raw LLM response storage in payments table for audit
+- Non-payment emails marked as completed without creating payment
+- Round-robin batch processing across all accounts
+- LLMSyncJobRepository with GetPendingJobs, GetFailedJobs, GetProcessingJobs
+- PaymentRepository with Create and BulkCreate methods
+- LLMProcessor service for batch email processing and payment extraction
+- Gmail client FetchMessageIDs method for lightweight message ID fetching
+- OpenRouter API integration with batch support
+- OPENROUTER_API_KEY configuration variable
+
+### Changed
+
+- Email sync job now creates LLM sync jobs instead of processing emails directly
+- EmailProcessor modified to fetch message IDs only (not full emails)
+- Gmail client interface updated with FetchMessageIDs method
+- Watcher now processes three job types: account, email, and LLM sync
+- Main application wired with LLM processor and OpenRouter client
+
+### Technical
+
+- LLM sync job table with message_id, status, last_synced_at for round-robin
+- Payment table with merchant, amount, currency, date, status, recurrence, category
+- Raw LLM response stored as JSONB in payments table
+- Batch size: 100 LLM jobs per cycle
+- Infinite retry for failed LLM jobs
+- ON CONFLICT DO NOTHING for duplicate message IDs in LLM sync jobs
+- Composite indexes on (status, last_synced_at) for efficient round-robin
+- Foreign key CASCADE delete on account removal
+- Payment validation: requires merchant_name, amount, currency, due, status
+- OpenRouter free model: meta-llama/llama-3.2-3b-instruct:free
+- 120-second timeout for LLM API calls
+
+
+### Changed
+
+- Database schema uses snake_case for all column names (consistent with existing tables)
+- llm_sync_job table: account_id, message_id, last_synced_at, last_error, created_at, updated_at, processed_at
+- payment table: account_id, external_reference, raw_llm_response, created_at, updated_at
+- All repository queries updated to use snake_case column names
+
+
+### Changed
+
+- OpenRouter client now uses account default model instead of hardcoded model
+- Model parameter is optional - if not set, uses the default model configured in OpenRouter account settings
+- Added SetModel() method to optionally override the default model if needed
+
+
+### Fixed
+
+- Re-ran migrations 000004 and 000005 to ensure llm_sync_job and payment tables are created
+- Confirmed message_id has unique index to prevent duplicate message processing
+
+
+### Fixed
+
+- LLM processor now fetches emails directly by Gmail message ID instead of using incorrect query
+- Added FetchEmailByID method to Gmail client for direct message retrieval
+- Fixed "email not found" errors in LLM sync jobs
+
+
+### Changed
+
+- Increased OpenRouter API timeout from 2 minutes to 5 minutes (free models are slow)
+- Reduced LLM batch size from 100 to 10 jobs per cycle (prevents timeout with slow free models)
+- Each batch now processes ~10 emails taking 3-10 minutes total (manageable within timeout)
+

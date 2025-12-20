@@ -11,6 +11,7 @@ import (
 	"github.com/vipul43/kiwis-worker/internal/config"
 	"github.com/vipul43/kiwis-worker/internal/database"
 	"github.com/vipul43/kiwis-worker/internal/gmail"
+	"github.com/vipul43/kiwis-worker/internal/openrouter"
 	"github.com/vipul43/kiwis-worker/internal/repository"
 	"github.com/vipul43/kiwis-worker/internal/service"
 	"github.com/vipul43/kiwis-worker/internal/watcher"
@@ -48,17 +49,23 @@ func run() error {
 	// Initialize repositories
 	accountJobRepo := repository.NewAccountSyncJobRepository(db)
 	emailJobRepo := repository.NewEmailSyncJobRepository(db)
+	llmJobRepo := repository.NewLLMSyncJobRepository(db)
 	accountRepo := repository.NewAccountRepository(db)
+	paymentRepo := repository.NewPaymentRepository(db)
 
 	// Initialize services
 	accountProcessor := service.NewAccountProcessor(accountRepo)
 
 	// Initialize Gmail client
 	gmailClient := gmail.NewClient(cfg.GmailClientID, cfg.GmailClientSecret)
-	emailProcessor := service.NewEmailProcessor(accountRepo, emailJobRepo, gmailClient)
+	emailProcessor := service.NewEmailProcessor(accountRepo, emailJobRepo, llmJobRepo, gmailClient)
+
+	// Initialize OpenRouter client
+	openRouterClient := openrouter.NewClient(cfg.OpenRouterAPIKey)
+	llmProcessor := service.NewLLMProcessor(accountRepo, llmJobRepo, paymentRepo, gmailClient, openRouterClient)
 
 	// Initialize watcher
-	w := watcher.New(cfg, accountJobRepo, emailJobRepo, accountProcessor, emailProcessor)
+	w := watcher.New(cfg, accountJobRepo, emailJobRepo, llmJobRepo, accountProcessor, emailProcessor, llmProcessor)
 
 	// Setup graceful shutdown
 	ctx, cancel := context.WithCancel(context.Background())

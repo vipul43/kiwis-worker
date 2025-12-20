@@ -16,23 +16,29 @@ type Watcher struct {
 	cfg              *config.Config
 	accountJobRepo   *repository.AccountSyncJobRepository
 	emailJobRepo     *repository.EmailSyncJobRepository
+	llmJobRepo       *repository.LLMSyncJobRepository
 	accountProcessor *service.AccountProcessor
 	emailProcessor   *service.EmailProcessor
+	llmProcessor     *service.LLMProcessor
 }
 
 func New(
 	cfg *config.Config,
 	accountJobRepo *repository.AccountSyncJobRepository,
 	emailJobRepo *repository.EmailSyncJobRepository,
+	llmJobRepo *repository.LLMSyncJobRepository,
 	accountProcessor *service.AccountProcessor,
 	emailProcessor *service.EmailProcessor,
+	llmProcessor *service.LLMProcessor,
 ) *Watcher {
 	return &Watcher{
 		cfg:              cfg,
 		accountJobRepo:   accountJobRepo,
 		emailJobRepo:     emailJobRepo,
+		llmJobRepo:       llmJobRepo,
 		accountProcessor: accountProcessor,
 		emailProcessor:   emailProcessor,
+		llmProcessor:     llmProcessor,
 	}
 }
 
@@ -72,6 +78,11 @@ func (w *Watcher) processAllPendingJobs(ctx context.Context) error {
 	// Process email sync jobs (round-robin by priority)
 	if err := w.processEmailSyncJobs(ctx); err != nil {
 		log.Printf("Error processing email sync jobs: %v", err)
+	}
+
+	// Process LLM sync jobs (batch processing)
+	if err := w.processLLMSyncJobs(ctx); err != nil {
+		log.Printf("Error processing LLM sync jobs: %v", err)
 	}
 
 	return nil
