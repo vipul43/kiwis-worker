@@ -63,16 +63,6 @@ func (c *Client) BatchExtractPayments(ctx context.Context, emails []EmailData) (
 		return nil, nil, nil
 	}
 
-	// Build batch of messages
-	messages := make([]map[string]interface{}, 0, len(emails))
-	for _, email := range emails {
-		prompt := c.buildPrompt(email)
-		messages = append(messages, map[string]interface{}{
-			"role":    "user",
-			"content": prompt,
-		})
-	}
-
 	// For now, process sequentially (OpenRouter free tier may not support true batching)
 	// TODO: Implement true batch API when available
 	results := make([]PaymentData, 0, len(emails))
@@ -165,7 +155,7 @@ func (c *Client) ExtractPayment(ctx context.Context, email EmailData) (*PaymentD
 
 	// Store raw response for audit
 	var rawResponse map[string]interface{}
-	json.Unmarshal(body, &rawResponse)
+	_ = json.Unmarshal(body, &rawResponse)
 
 	// Clean the content (remove markdown code blocks if present)
 	cleanedContent := c.cleanJSONResponse(content)

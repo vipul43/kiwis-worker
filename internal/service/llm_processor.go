@@ -73,7 +73,7 @@ func (p *LLMProcessor) processAccountJobs(ctx context.Context, accountID string,
 		// Mark all jobs as failed
 		for _, job := range jobs {
 			errMsg := fmt.Sprintf("failed to get account: %v", err)
-			p.llmSyncJobRepo.UpdateStatus(ctx, job.ID, models.LLMStatusFailed, &errMsg)
+			_ = p.llmSyncJobRepo.UpdateStatus(ctx, job.ID, models.LLMStatusFailed, &errMsg)
 		}
 		return fmt.Errorf("failed to get account: %w", err)
 	}
@@ -82,7 +82,7 @@ func (p *LLMProcessor) processAccountJobs(ctx context.Context, accountID string,
 	if account.AccessToken == nil || account.RefreshToken == nil {
 		errMsg := "account missing tokens"
 		for _, job := range jobs {
-			p.llmSyncJobRepo.UpdateStatus(ctx, job.ID, models.LLMStatusFailed, &errMsg)
+			_ = p.llmSyncJobRepo.UpdateStatus(ctx, job.ID, models.LLMStatusFailed, &errMsg)
 		}
 		return fmt.Errorf("account missing tokens")
 	}
@@ -95,7 +95,7 @@ func (p *LLMProcessor) processAccountJobs(ctx context.Context, accountID string,
 		if err != nil {
 			errMsg := fmt.Sprintf("failed to refresh token: %v", err)
 			for _, job := range jobs {
-				p.llmSyncJobRepo.UpdateStatus(ctx, job.ID, models.LLMStatusFailed, &errMsg)
+				_ = p.llmSyncJobRepo.UpdateStatus(ctx, job.ID, models.LLMStatusFailed, &errMsg)
 			}
 			return fmt.Errorf("failed to refresh token: %w", err)
 		}
@@ -112,7 +112,7 @@ func (p *LLMProcessor) processAccountJobs(ctx context.Context, accountID string,
 		if err != nil {
 			log.Printf("Failed to fetch email %s: %v", job.MessageID, err)
 			errMsg := fmt.Sprintf("failed to fetch email: %v", err)
-			p.llmSyncJobRepo.UpdateStatus(ctx, job.ID, models.LLMStatusFailed, &errMsg)
+			_ = p.llmSyncJobRepo.UpdateStatus(ctx, job.ID, models.LLMStatusFailed, &errMsg)
 			continue
 		}
 		emails = append(emails, *email)
@@ -131,7 +131,7 @@ func (p *LLMProcessor) processAccountJobs(ctx context.Context, accountID string,
 		// Mark all jobs as failed
 		errMsg := fmt.Sprintf("LLM extraction failed: %v", err)
 		for _, job := range jobs {
-			p.llmSyncJobRepo.UpdateStatus(ctx, job.ID, models.LLMStatusFailed, &errMsg)
+			_ = p.llmSyncJobRepo.UpdateStatus(ctx, job.ID, models.LLMStatusFailed, &errMsg)
 		}
 		return fmt.Errorf("LLM extraction failed: %w", err)
 	}
@@ -148,7 +148,7 @@ func (p *LLMProcessor) processAccountJobs(ctx context.Context, accountID string,
 		if paymentData.MerchantName == "" || paymentData.Amount == nil {
 			// Not a payment email, mark job as completed
 			log.Printf("Email %s is not a payment email, marking as completed", job.MessageID)
-			p.llmSyncJobRepo.UpdateStatus(ctx, job.ID, models.LLMStatusCompleted, nil)
+			_ = p.llmSyncJobRepo.UpdateStatus(ctx, job.ID, models.LLMStatusCompleted, nil)
 			continue
 		}
 
@@ -160,7 +160,7 @@ func (p *LLMProcessor) processAccountJobs(ctx context.Context, accountID string,
 			if err != nil {
 				log.Printf("Failed to parse due date %s: %v", paymentData.Due, err)
 				errMsg := fmt.Sprintf("failed to parse due date: %v", err)
-				p.llmSyncJobRepo.UpdateStatus(ctx, job.ID, models.LLMStatusFailed, &errMsg)
+				_ = p.llmSyncJobRepo.UpdateStatus(ctx, job.ID, models.LLMStatusFailed, &errMsg)
 				continue
 			}
 		}
@@ -187,7 +187,7 @@ func (p *LLMProcessor) processAccountJobs(ctx context.Context, accountID string,
 		paymentsToCreate = append(paymentsToCreate, payment)
 
 		// Mark job as completed
-		p.llmSyncJobRepo.UpdateStatus(ctx, job.ID, models.LLMStatusCompleted, nil)
+		_ = p.llmSyncJobRepo.UpdateStatus(ctx, job.ID, models.LLMStatusCompleted, nil)
 		log.Printf("Extracted payment from email %s: %s - %.2f %s", job.MessageID, payment.Merchant, payment.Amount, payment.Currency)
 	}
 

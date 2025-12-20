@@ -199,3 +199,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Now handles responses with explanatory text before/after the JSON
 - Extracts content between first { and last } to get clean JSON
 
+
+### Fixed
+
+- Fixed all linting errors (errcheck and staticcheck)
+- Added proper error handling for deferred tx.Rollback() calls
+- Added blank identifier for intentionally ignored error returns
+- Removed unused messages variable in BatchExtractPayments
+

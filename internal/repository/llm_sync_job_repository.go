@@ -41,7 +41,9 @@ func (r *LLMSyncJobRepository) BulkCreate(ctx context.Context, jobs []models.LLM
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() {
+		_ = tx.Rollback()
+	}()
 
 	query := `
 		INSERT INTO llm_sync_job (

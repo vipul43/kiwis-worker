@@ -54,7 +54,9 @@ func (r *PaymentRepository) BulkCreate(ctx context.Context, payments []models.Pa
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() {
+		_ = tx.Rollback()
+	}()
 
 	query := `
 		INSERT INTO payment (
