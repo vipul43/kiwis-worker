@@ -216,3 +216,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Test coverage for JSON cleaning with various formats (markdown, plain text, whitespace)
 - Test coverage for payment validation with edge cases (missing fields, invalid amounts)
 
+
+### Fixed
+
+- Gmail query now excludes CC'ed emails using `deliveredto:me` filter
+- Only fetches emails where user is primary recipient (in "To" field)
+- Prevents processing of emails where user is only CC'ed
+
