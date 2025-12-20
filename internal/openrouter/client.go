@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -166,9 +167,12 @@ func (c *Client) ExtractPayment(ctx context.Context, email EmailData) (*PaymentD
 	var rawResponse map[string]interface{}
 	json.Unmarshal(body, &rawResponse)
 
+	// Clean the content (remove markdown code blocks if present)
+	cleanedContent := c.cleanJSONResponse(content)
+
 	// Parse payment data from LLM response
 	var paymentData PaymentData
-	if err := json.Unmarshal([]byte(content), &paymentData); err != nil {
+	if err := json.Unmarshal([]byte(cleanedContent), &paymentData); err != nil {
 		return nil, rawResponse, fmt.Errorf("failed to parse payment JSON: %w", err)
 	}
 
@@ -179,6 +183,25 @@ func (c *Client) ExtractPayment(ctx context.Context, email EmailData) (*PaymentD
 	}
 
 	return &paymentData, rawResponse, nil
+}
+
+// cleanJSONResponse removes markdown code blocks and extra whitespace from LLM response
+func (c *Client) cleanJSONResponse(content string) string {
+	content = strings.TrimSpace(content)
+
+	// Find the first { and last } to extract just the JSON object
+	startIdx := strings.Index(content, "{")
+	endIdx := strings.LastIndex(content, "}")
+
+	if startIdx == -1 || endIdx == -1 || startIdx > endIdx {
+		// No valid JSON found, return as is and let JSON parser fail with proper error
+		return content
+	}
+
+	// Extract just the JSON object
+	jsonContent := content[startIdx : endIdx+1]
+
+	return strings.TrimSpace(jsonContent)
 }
 
 // buildPrompt builds the LLM prompt from email data

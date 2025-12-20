@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	LLMBatchSize = 10 // Process 10 LLM jobs at a time (free models are slow, ~20-60s per email)
+	LLMBatchSize = 3 // Process 3 LLM jobs at a time (free models are very slow, ~30-60s per email, 3 emails = ~3-5 minutes)
 )
 
 type LLMProcessor struct {

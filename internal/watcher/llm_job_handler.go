@@ -9,20 +9,20 @@ import (
 
 // processLLMSyncJobs processes pending, failed, and processing LLM sync jobs (round-robin batch)
 func (w *Watcher) processLLMSyncJobs(ctx context.Context) error {
-	// Fetch pending jobs (batch of 10)
-	pendingJobs, err := w.llmJobRepo.GetPendingJobs(ctx, 10)
+	// Fetch pending jobs (batch of 3)
+	pendingJobs, err := w.llmJobRepo.GetPendingJobs(ctx, 3)
 	if err != nil {
 		return err
 	}
 
-	// Fetch failed jobs (batch of 10)
-	failedJobs, err := w.llmJobRepo.GetFailedJobs(ctx, 10)
+	// Fetch failed jobs (batch of 3)
+	failedJobs, err := w.llmJobRepo.GetFailedJobs(ctx, 3)
 	if err != nil {
 		return err
 	}
 
-	// Fetch processing jobs (stuck jobs, batch of 10)
-	processingJobs, err := w.llmJobRepo.GetProcessingJobs(ctx, 10)
+	// Fetch processing jobs (stuck jobs, batch of 3)
+	processingJobs, err := w.llmJobRepo.GetProcessingJobs(ctx, 3)
 	if err != nil {
 		return err
 	}

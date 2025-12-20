@@ -178,3 +178,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Reduced LLM batch size from 100 to 10 jobs per cycle (prevents timeout with slow free models)
 - Each batch now processes ~10 emails taking 3-10 minutes total (manageable within timeout)
 
+
+### Changed
+
+- Further reduced LLM batch size from 10 to 3 jobs per cycle to prevent timeouts
+- Each batch now processes ~3 emails taking 1.5-3 minutes (well within 5-minute timeout)
+- Watcher processes batches every 10 seconds, so still makes steady progress
+
+
+### Fixed
+
+- Added JSON response cleaning to handle LLM responses wrapped in markdown code blocks
+- Strips ```json and ``` markers before parsing JSON
+- Prevents "invalid character '`'" parsing errors
+
+
+### Fixed
+
+- Improved JSON response cleaning to extract only the JSON object from LLM responses
+- Now handles responses with explanatory text before/after the JSON
+- Extracts content between first { and last } to get clean JSON
+
