@@ -69,6 +69,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Unit tests for OpenRouter client (cleanJSONResponse and isValidPayment functions)
 - Test coverage for JSON cleaning with various formats (markdown, plain text, whitespace)
 - Test coverage for payment validation with edge cases (missing fields, invalid amounts)
+- Account UPDATE trigger: now triggers account sync job reset when account is updated
+- Account sync job reset on update: sets status to pending, clears last_error and processed_at
+- Full re-sync on account update: entire sync process (account → email → LLM) reruns from beginning
 
 ### Changed
 
@@ -107,6 +110,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Renamed environment variables for frontend consistency: GMAIL_CLIENT_ID → GOOGLE_CLIENT_ID, GMAIL_CLIENT_SECRET → GOOGLE_CLIENT_SECRET
 - Updated config struct fields: GmailClientID → GoogleClientID, GmailClientSecret → GoogleClientSecret
 - Updated all references in main.go, .env, .env.example, README.md, and tests
+- Renamed trigger function from `create_account_sync_job()` to `handle_account_sync_job()` to reflect dual purpose
+- Renamed trigger from `account_insert_trigger` to `account_sync_trigger` for clarity
+- Trigger now fires on both INSERT and UPDATE operations on account table
 
 ### Removed
 
