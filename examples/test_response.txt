@@ -1,0 +1,15 @@
+{
+  "merchant_name": "OpenAILLC",
+  "description": "Standing Instruction payment towards OpenAILLC",
+  "amount": 1999,
+  "currency": "INR",
+  "due": "2025-10-05T00:00:00",
+  "recurrence": "monthly",
+  "status": "upcoming",
+  "category": "subscription",
+  "external_reference": "Y1RmcHz4ei",
+  "metadata": {
+    "credit_card_last4": "8000",
+    "bank": "ICICI Bank"
+  }
+}

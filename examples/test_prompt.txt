@@ -1,0 +1,250 @@
+You are an AI that extracts structured upcoming-payment information from emails, messages, invoices, or notifications.
+
+Your job is to analyze the given text and return a STRICT JSON object containing the fields required to populate the `upcoming_payments` table.
+
+### OUTPUT FORMAT (STRICT JSON ONLY)
+Return JSON with these keys:
+
+{
+  "merchant_name": "",
+  "description": "",
+  "amount": null,
+  "currency": "",
+  "due": "",
+  "recurrence": null,
+  "status": "",
+  "category": "",
+  "external_reference": "",
+  "metadata": {}
+}
+
+### FIELD DEFINITIONS
+
+merchant_name  
+- The business or entity requesting payment (e.g., “Netflix”, “Amazon Pay”, “HDFC Bank”).
+
+description  
+- Short natural-language description of what the payment is for.
+
+amount  
+- Numeric value only. Do NOT include commas or currency symbols.
+
+currency  
+- Infer from text: INR, USD, EUR, GBP, etc. Default to INR if unclear.
+
+due  
+- The next due date/time in ISO 8601 format: YYYY-MM-DDTHH:MM:SS  
+  If only a date is available, use "T00:00:00".
+
+recurrence  
+- one of: null, "monthly", "yearly", "weekly", "daily", "quarterly", "semiannual"
+- If subscription-like, infer the correct recurrence.
+
+status  
+- one of: "upcoming", "due_soon", "overdue", "paid", "cancelled"  
+- Default: "upcoming"
+
+category  
+- One of: "subscription", "utility", "emi", "credit_card_bill", "loan", "insurance", "rent", "misc"  
+- Infer logically.
+
+external_reference  
+- Invoice number, subscription ID, bill number, reference ID, order number, UTR, etc.  
+- Null if unavailable.
+
+metadata  
+- JSON object with ANY additional important details:
+  - billing period
+  - statement date
+  - last payment date
+  - plan name
+  - card used
+  - UTR / transaction hash
+  - customer ID  
+  - etc.
+
+### CRITICAL RULES
+- Output ONLY the JSON object, no explanations.
+- All values must exist. Use null if missing.
+- Never hallucinate merchant names; infer only from text.
+- If multiple amounts appear, pick the one associated with the upcoming payment.
+- If due date not found, set “due”: null.
+
+### Now extract the payment JSON from this input:
+
+Delivered-To: saifunny43@gmail.com
+Received: by 2002:ad5:41cd:0:b0:372:4f24:3fd1 with SMTP id g13csp5419911imo;
+        Fri, 3 Oct 2025 23:06:34 -0700 (PDT)
+X-Google-Smtp-Source: AGHT+IHFZIqaiHxeCovSowaFTo//0rhtXX2IZdgSKxW5Ycz5pNgnt+k55MBE6f3yS1Ylh4EBKvDE
+X-Received: by 2002:a05:6a20:a11a:b0:2b0:ff55:f827 with SMTP id adf61e73a8af0-32b61faa927mr7209733637.25.1759557994620;
+        Fri, 03 Oct 2025 23:06:34 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1759557994; cv=none;
+        d=google.com; s=arc-20240605;
+        b=daUSU+gZQUKP6/cUdSqs2ZBtyXn1xBteGR06GIhPHoezjvARHFBuyqmwKHa9gouiCm
+         uN4+3CQMzpvY22ZyaHz/Yju/HXNEekpOGKXZWPerZlFWFCRQnCWf3up/qtsM+la1UJ4C
+         BWFXce4+U2V0jVMhCWnmyTn0IaCbgrJWuyrl6817B/VjsmceNgUmaJfBfH8CDEYMrits
+         wRb3Egrzu6sKRz9dWMlTdWyxiqTmz7/28x+czFFlM+UrAgiBMyHx5Hre7yxOL03gLJeu
+         FZaYw7P3nXnT7LnXLV2aQLO0RZxWhhlsE6znj0MdZ3/b5++KTs21ybG62eyFDFVsUtdc
+         GXhA==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=content-transfer-encoding:to:from:subject:date:message-id
+         :mime-version:dkim-signature;
+        bh=veiAT0gFYLH91Uj9PupLLA5WypFey2frrKtK/PLc6C8=;
+        fh=1dWyYcx0WaY3dqxwRJUKiowM+KYHQdXKLt+39Wg+sWQ=;
+        b=iMzi83xKb+gPnydlZNwnk27IscWm2qSDUZUOfeHxBJx4nuz5LraQj019igIhONVDbw
+         Js8rm0fBxx6UHaxcvQUmLoTwxerWz6fLX6AAUOQBK9sNjQ0qmQB+6SRAXxi9ohvz/tQu
+         9vzB0kKiIxWxffH6AKX6wL17oEcF/DeEbNkri17VdEl9hjjojvuowoiuk2sXAd//cnOi
+         hlX0C8yGBu8sYGWIvHvgPV6F+0QnmeKJF2KMRDZglDEFMqapgfwR0YU6XOCoOPOQ5QDC
+         DdJCZBLHPEhvm4g5WHW3Bfxc4pSRrde/7e4GKoK8erL9xHXdY6oxU8L+noLWUIuxrniw
+         MUyQ==;
+        dara=google.com
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@icicibank.com header.s=icicibank header.b=EI2nGJke;
+       spf=pass (google.com: domain of cards@icicibank.com designates 103.87.43.119 as permitted sender) smtp.mailfrom=cards@icicibank.com;
+       dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=icicibank.com
+Return-Path: <cards@icicibank.com>
+Received: from jprmsmail5.icicibank.com (jprmsmail5.icicibank.com. [103.87.43.119])
+        by mx.google.com with ESMTPS id 41be03b00d2f7-b6099d4dedesi3949847a12.572.2025.10.03.23.06.34
+        for <saifunny43@gmail.com>
+        (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
+        Fri, 03 Oct 2025 23:06:34 -0700 (PDT)
+Received-SPF: pass (google.com: domain of cards@icicibank.com designates 103.87.43.119 as permitted sender) client-ip=103.87.43.119;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@icicibank.com header.s=icicibank header.b=EI2nGJke;
+       spf=pass (google.com: domain of cards@icicibank.com designates 103.87.43.119 as permitted sender) smtp.mailfrom=cards@icicibank.com;
+       dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=icicibank.com
+Received: from JPRCORPMASSSMTP01.icicibank.com (unknown [10.78.43.121]) by jprmsmail5.icicibank.com (Postfix) with ESMTP id 4cdw5h6Vqwz1LQKGV for <saifunny43@gmail.com>; Sat,
+  4 Oct 2025 11:36:32 +0530 (IST)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=icicibank.com; s=icicibank; t=1759557992; bh=veiAT0gFYLH91Uj9PupLLA5WypFey2frrKtK/PLc6C8=; h=Date:Subject:From:To; b=EI2nGJkeeP/uCLtp3/ZBmvaoQnk8JXNATo6V+NAZFrtDU9UOy2o1/j8vv+M4Vpcez
+	 z5IwCW+Fq96aKtQg6lLZUkcVhmCxtAvV1zFS0J1AASjwZO6EBn82IKUlc3CpqQHNT1
+	 yxPCg/d6wsgtCoyo9X3kzCRaqiSS9X3N/RGtgpNz5PbnMj4AgUhRigayMBwwIL3X3b
+	 Pv2+3s60cPUvIEk8rgZQFo0D9INufDGxIo/oaQzpG0IvupZUykmw/K49DnHtvp6LMh
+	 RJUrqEOplT5h9yedQGKBir4mkTRTdiTEKVj0xfwqKrhthv1WBYNs8wtl9JQWdoCVuj
+	 DLNO2wbC7jpUQ==
+Received: from HNLC3DSECA09 () by JPRCORPMASSSMTP01.icicibank.com
+  with ESMTP id 59466WSj318596 for <saifunny43@gmail.com>; Sat, 4 Oct 2025 11:36:32 +0530
+MIME-Version: 1.0
+Message-ID: <msg.1759557992853.vertxmail.372610@HNLC3DSECA09>
+Date: Sat, 04 Oct 2025 11:36:32 +0530 (IST)
+Subject: Upcoming payment notification: Standing Instructions on your ICICI Bank Credit Card
+From: cards@icicibank.com
+To: saifunny43@gmail.com
+Content-Type: text/html
+Content-Transfer-Encoding: 7bit
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+<title>ICICI Bank Online</title>
+</head>
+<body topmargin="0">
+<table width="650" border="0" align="center" cellpadding="0" cellspacing="0">
+  <tbody>
+    <tr>
+      <td><img src="https://www.icicibank.com/campaigns/mailers/2017-february/CC-services-mailer/images/top.jpg" width="650" height="86" /></td>
+    </tr>
+    <tr>
+      <td style="border-left:#e56e2e solid 1px;border-right:#e56e2e solid 1px"><table width="100%" border="0" align="center" cellpadding="0" cellspacing="0">
+        <tbody>
+          <tr>
+            <td style="padding:15px;"><table width="580" border="0" align="center" cellpadding="0" cellspacing="0"><tr>
+
+	<br />
+              <tr>
+                <td></td>
+                </tr>
+              <tr>
+                <td height="10" style="text-align:justify;"><font face="Mulish semibold, Arial, Arial" color="#000000" style="font-size:14px"> Dear Customer,<br />
+                  <br />
+
+
+              <br />
+
+Your payment of INR 1999.00 towards OpenAILLC through Standing Instruction Y1RmcHz4ei is due on 05/10/2025 and will be debited from your ICICI Bank Credit Card 8000.
+
+<a href="https://www.icicibank.com/disclaimer/merchant-standing-instructions?ITM=nli_cms_CC_manage_standing_instructions_menu_navigation_btn">Click here</a>  to cancel this Debit or your Standing Instruction.
+
+<T&Cs>
+<Disclaimer>
+ <br />
+
+
+<br />
+
+                  <br />
+                  Sincerely,<br />
+                  <br />
+                 ICICI Bank Limited.</font></td>
+                </tr>
+              <tr>
+                <td height="10" style="text-align:justify;">&nbsp;</td>
+                </tr>
+              <tr>
+                <td height="1" bgcolor="#ded7bd"></td>
+                </tr>
+              <tr>
+                <td height="10" style="text-align:justify;">&nbsp;</td>
+                </tr>
+              <tr>
+                <td height="10" style="text-align:justify;"><font face="Mulish semibold, Arial, Arial" color="#000000" style="font-size:12px">
+This is a system generated e-mail. Please do not reply to this e-mail. <br />
+<br />
+<br />
+CONFIDENTIALITY INFORMATION AND DISCLAIMER
+<br />
+This e-mail message and its attachments may contain confidential, proprietary or legally privileged information and is intended solely for the use of the individual or entity to whom it is addressed. If you have erroneously received this message, please delete it immediately and notify the sender. If you are not the intended recipient of the e-mail message you should not disseminate, distribute or copy this e-mail. E-mail transmission cannot be guaranteed to be secure or error-free as information could be intercepted, corrupted, lost, destroyed, incomplete or contain viruses and the ICICI Bank accepts no liability for any damage caused by the limitations of the e-mail transmission.
+	         </table></td>
+          </tr>
+        </tbody>
+      </table></td>
+    </tr>
+    <tr>
+      <td><img src="https://www.icicibank.com/campaigns/mailers/2017-february/CC-services-mailer/images/bottom.gif" width="650" height="30" /></td>
+    </tr>
+    <tr>
+      <td height="25"><font face="Arial" color="#a41c2b" style="font-size:12px">Now banking is more convenient with: </font></td>
+    </tr>
+    <tr>
+      <td><table width="100%" border="0" cellspacing="0" cellpadding="0">
+        <tbody>
+          <tr>
+            <td width="6" align="right"><img src="https://www.icicibank.com/campaigns/mailers/2017-february/CC-services-mailer/images/BAleft.gif" width="6" height="48" /></td>
+            <td style="border-top:#a41c2b solid 1px;border-bottom:#a41c2b solid 1px"><table width="100%" border="0" cellpadding="0" cellspacing="0">
+              <tbody>
+                <tr>
+                  <td width="6%" height="35"><a href="https://www.icicibank.com/campaigns/mailers/2017-february/CC-services-mailer/1.htm" target="_blank"><img src="https://www.icicibank.com/campaigns/mailers/2017-february/CC-services-mailer/images/bank.jpg" width="27" height="26" border="0" /></a></td>
+                  <td width="17%" height="35" style="border-right:#a41c2b solid 1px"><a href="https://www.icicibank.com/campaigns/mailers/2017-february/CC-services-mailer/1.htm" target="_blank"><font face="Arial" color="#000000" style="font-size:9px;text-decoration:none">
+                    More than 4000 Branches</font></a></td>
+                  <td width="8%" height="35" align="center"><a href="https://www.icicibank.com/campaigns/mailers/2017-february/CC-services-mailer/2.htm" target="_blank"><img src="https://www.icicibank.com/campaigns/mailers/2017-february/CC-services-mailer/images/atm.jpg" width="28" height="27" border="0" /></a></td>
+                  <td width="9%" height="35" align="left" style="border-right:#a41c2b solid 1px"><font face="Arial" color="#000000" style="font-size:9px;text-decoration:none"><a href="https://www.icicibank.com/campaigns/mailers/2017-february/CC-services-mailer/2.htm" target="_blank"><font face="Arial" color="#000000" style="font-size:9px;text-decoration:none">24x7 ATM Services</font></a></font></td>
+                  <td width="8%" height="35" align="center"><a href="https://www.icicibank.com/campaigns/mailers/2017-february/CC-services-mailer/3.htm" target="_blank"><img src="https://www.icicibank.com/campaigns/mailers/2017-february/CC-services-mailer/images/phone.jpg" width="27" height="27" border="0" /></a></td>
+                  <td width="12%" height="35" align="left" style="border-right:#a41c2b solid 1px"><a href="https://www.icicibank.com/campaigns/mailers/2017-february/CC-services-mailer/3.htm" target="_blank"><font face="Arial" color="#000000" style="font-size:9px;text-decoration:none">
+                    Customer Care</font></a></td>
+                  <td width="8%" height="35" align="center"><a href="https://www.icicibank.com/campaigns/mailers/2017-february/CC-services-mailer/4.htm" target="_blank"><img src="https://www.icicibank.com/campaigns/mailers/2017-february/CC-services-mailer/images/mouse.jpg" width="27" height="26" border="0" /></a></td>
+                  <td width="13%" height="35" align="left" style="border-right:#a41c2b solid 1px"><a href="https://www.icicibank.com/campaigns/mailers/2017-february/CC-services-mailer/4.htm" target="_blank"><font face="Arial" color="#000000" style="font-size:9px;text-decoration:none">
+                    Internet Banking </font></a></td>
+                  <td width="8%" height="35" align="center"><a href="https://www.icicibank.com/campaigns/mailers/2017-february/CC-services-mailer/5.htm" target="_blank"><img src="https://www.icicibank.com/campaigns/mailers/2017-february/CC-services-mailer/images/mobile.jpg" width="26" height="26" border="0" /></a></td>
+                  <td width="11%" height="35" align="left"><a href="https://www.icicibank.com/campaigns/mailers/2017-february/CC-services-mailer/5.htm" target="_blank"><font face="Arial" color="#000000" style="font-size:9px;text-decoration:none">Mobile Banking </font></a></td>
+                </tr>
+              </tbody>
+            </table></td>
+            <td width="6" align="left"><img src="https://www.icicibank.com/campaigns/mailers/2017-february/CC-services-mailer/images/BAright.gif" width="6" height="48" /></td>
+          </tr>
+        </tbody>
+      </table></td>
+    </tr>
+    <tr>
+      <td height="8"></td>
+    </tr>
+    <tr>
+
+       </font></td>
+    </tr>
+    <tr>
+      <td height="8"></td>
+    </tr>
+  </tbody>
+</table>
+</body>
+</html>
