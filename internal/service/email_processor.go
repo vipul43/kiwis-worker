@@ -233,18 +233,3 @@ func (p *EmailProcessor) CreateInitialEmailSyncJob(ctx context.Context, accountI
 	log.Printf("Created initial email sync job %s for account %s (will be picked first)", job.ID, accountID)
 	return nil
 }
-
-// Helper functions for pointer conversion
-func stringPtr(s string) *string {
-	if s == "" {
-		return nil
-	}
-	return &s
-}
-
-func timePtr(t time.Time) *time.Time {
-	if t.IsZero() {
-		return nil
-	}
-	return &t
-}
