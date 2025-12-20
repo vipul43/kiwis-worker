@@ -57,7 +57,7 @@ func run() error {
 	accountProcessor := service.NewAccountProcessor(accountRepo)
 
 	// Initialize Gmail client
-	gmailClient := gmail.NewClient(cfg.GmailClientID, cfg.GmailClientSecret)
+	gmailClient := gmail.NewClient(cfg.GoogleClientID, cfg.GoogleClientSecret)
 	emailProcessor := service.NewEmailProcessor(accountRepo, emailJobRepo, llmJobRepo, gmailClient)
 
 	// Initialize OpenRouter client

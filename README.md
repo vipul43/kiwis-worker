@@ -59,15 +59,15 @@ The service will:
 
 Edit `.env`:
 - `DATABASE_URL`: PostgreSQL connection string (required)
-- `GMAIL_CLIENT_ID`: Google OAuth client ID (required for Gmail API)
-- `GMAIL_CLIENT_SECRET`: Google OAuth client secret (required for Gmail API)
+- `GOOGLE_CLIENT_ID`: Google OAuth client ID (required for Gmail API)
+- `GOOGLE_CLIENT_SECRET`: Google OAuth client secret (required for Gmail API)
 - `OPENROUTER_API_KEY`: OpenRouter API key (for payment extraction)
 
 Example:
 ```
 DATABASE_URL="postgres://user:password@localhost:5432/dbname?sslmode=disable"
-GMAIL_CLIENT_ID="123456-abc.apps.googleusercontent.com"
-GMAIL_CLIENT_SECRET="GOCSPX-xyz123"
+GOOGLE_CLIENT_ID="123456-abc.apps.googleusercontent.com"
+GOOGLE_CLIENT_SECRET="GOCSPX-xyz123"
 OPENROUTER_API_KEY="sk-or-v1-..."
 ```
 
@@ -254,8 +254,8 @@ processing (retry)
    - Create OAuth 2.0 Client ID
    - Add to `.env`:
      ```
-     GMAIL_CLIENT_ID="your-client-id.apps.googleusercontent.com"
-     GMAIL_CLIENT_SECRET="your-client-secret"
+     GOOGLE_CLIENT_ID="your-client-id.apps.googleusercontent.com"
+     GOOGLE_CLIENT_SECRET="your-client-secret"
      ```
 
 2. **Features implemented**:

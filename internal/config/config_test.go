@@ -8,11 +8,11 @@ import (
 func TestLoad_Success(t *testing.T) {
 	// Set required env vars
 	os.Setenv("DATABASE_URL", "postgres://test:test@localhost:5432/test")
-	os.Setenv("GMAIL_CLIENT_ID", "test-client-id")
-	os.Setenv("GMAIL_CLIENT_SECRET", "test-client-secret")
+	os.Setenv("GOOGLE_CLIENT_ID", "test-client-id")
+	os.Setenv("GOOGLE_CLIENT_SECRET", "test-client-secret")
 	defer os.Unsetenv("DATABASE_URL")
-	defer os.Unsetenv("GMAIL_CLIENT_ID")
-	defer os.Unsetenv("GMAIL_CLIENT_SECRET")
+	defer os.Unsetenv("GOOGLE_CLIENT_ID")
+	defer os.Unsetenv("GOOGLE_CLIENT_SECRET")
 
 	cfg, err := Load()
 	if err != nil {
@@ -23,12 +23,12 @@ func TestLoad_Success(t *testing.T) {
 		t.Errorf("expected DATABASE_URL to be set, got %s", cfg.DatabaseURL)
 	}
 
-	if cfg.GmailClientID != "test-client-id" {
-		t.Errorf("expected GmailClientID to be set, got %s", cfg.GmailClientID)
+	if cfg.GoogleClientID != "test-client-id" {
+		t.Errorf("expected GoogleClientID to be set, got %s", cfg.GoogleClientID)
 	}
 
-	if cfg.GmailClientSecret != "test-client-secret" {
-		t.Errorf("expected GmailClientSecret to be set, got %s", cfg.GmailClientSecret)
+	if cfg.GoogleClientSecret != "test-client-secret" {
+		t.Errorf("expected GoogleClientSecret to be set, got %s", cfg.GoogleClientSecret)
 	}
 
 	// Check defaults

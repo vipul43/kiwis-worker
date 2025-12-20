@@ -8,13 +8,13 @@ import (
 )
 
 type Config struct {
-	DatabaseURL       string
-	PollInterval      int // seconds
-	MaxRetries        int
-	ShutdownTimeout   int // seconds
-	GmailClientID     string
-	GmailClientSecret string
-	OpenRouterAPIKey  string
+	DatabaseURL        string
+	PollInterval       int // seconds
+	MaxRetries         int
+	ShutdownTimeout    int // seconds
+	GoogleClientID     string
+	GoogleClientSecret string
+	OpenRouterAPIKey   string
 }
 
 // Load reads configuration from environment variables
@@ -27,10 +27,10 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("DATABASE_URL is required")
 	}
 
-	gmailClientID := os.Getenv("GMAIL_CLIENT_ID")
-	gmailClientSecret := os.Getenv("GMAIL_CLIENT_SECRET")
-	if gmailClientID == "" || gmailClientSecret == "" {
-		fmt.Println("Warning: GMAIL_CLIENT_ID or GMAIL_CLIENT_SECRET not set, Gmail API will not work")
+	googleClientID := os.Getenv("GOOGLE_CLIENT_ID")
+	googleClientSecret := os.Getenv("GOOGLE_CLIENT_SECRET")
+	if googleClientID == "" || googleClientSecret == "" {
+		fmt.Println("Warning: GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET not set, Gmail API will not work")
 	}
 
 	openRouterAPIKey := os.Getenv("OPENROUTER_API_KEY")
@@ -39,12 +39,12 @@ func Load() (*Config, error) {
 	}
 
 	return &Config{
-		DatabaseURL:       dbURL,
-		PollInterval:      10, // poll every 10 seconds
-		MaxRetries:        3,
-		ShutdownTimeout:   30,
-		GmailClientID:     gmailClientID,
-		GmailClientSecret: gmailClientSecret,
-		OpenRouterAPIKey:  openRouterAPIKey,
+		DatabaseURL:        dbURL,
+		PollInterval:       10, // poll every 10 seconds
+		MaxRetries:         3,
+		ShutdownTimeout:    30,
+		GoogleClientID:     googleClientID,
+		GoogleClientSecret: googleClientSecret,
+		OpenRouterAPIKey:   openRouterAPIKey,
 	}, nil
 }
