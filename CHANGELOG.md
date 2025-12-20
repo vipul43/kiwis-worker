@@ -207,3 +207,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added blank identifier for intentionally ignored error returns
 - Removed unused messages variable in BatchExtractPayments
 
+
+### Added
+
+- Unit tests for LLMSyncJob model (status constants and structure)
+- Unit tests for Payment model (status constants, recurrence constants, and structure)
+- Unit tests for OpenRouter client (cleanJSONResponse and isValidPayment functions)
+- Test coverage for JSON cleaning with various formats (markdown, plain text, whitespace)
+- Test coverage for payment validation with edge cases (missing fields, invalid amounts)
+
