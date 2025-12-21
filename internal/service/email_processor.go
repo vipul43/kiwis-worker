@@ -223,11 +223,13 @@ func (p *EmailProcessor) refreshToken(ctx context.Context, account *repository.A
 // Fetches emails in REVERSE chronological order (newest first) for recent payment dues
 // Only fetches emails where user is in "To" field (excludes CC'ed emails)
 // Excludes social category (pure noise with no payment emails)
+// Uses comprehensive keyword filter to reduce LLM costs while maintaining high coverage
 func (p *EmailProcessor) buildGmailQuery(job models.EmailSyncJob) string {
 	// Base query: only emails directly to user (not CC), exclude spam, sent, and social
 	// deliveredto:me ensures only emails where user is primary recipient
 	// -category:social excludes social media notifications (Facebook, LinkedIn, Twitter, etc.)
-	baseQuery := "in:inbox -in:spam -category:social deliveredto:me"
+	// Keyword filter: comprehensive list to catch all payment-related emails
+	baseQuery := "in:inbox -in:spam -category:social deliveredto:me {invoice OR bill OR payment OR paid OR pay OR due OR overdue OR outstanding OR balance OR amount OR total OR charge OR charged OR subscription OR renewal OR renew OR recurring OR membership OR plan OR premium OR upgrade OR downgrade OR receipt OR statement OR confirmation OR order OR purchase OR transaction OR refund OR reminder OR notice OR alert OR expiring OR expires OR expiry OR deadline OR emi OR installment OR instalment OR booking OR reservation OR renewing OR billing OR billed OR autopay OR auto-pay}"
 
 	// Add time filter based on sync type
 	if job.SyncType == models.SyncTypeInitial {
@@ -240,7 +242,7 @@ func (p *EmailProcessor) buildGmailQuery(job models.EmailSyncJob) string {
 		baseQuery += fmt.Sprintf(" after:%s", afterDate)
 	}
 
-	log.Printf("Gmail query for job %s: %s (newest first, To: only, no social)", job.ID, baseQuery)
+	log.Printf("Gmail query for job %s: %s (newest first, To: only, no social, keyword filtered)", job.ID, baseQuery)
 	return baseQuery
 }
 

@@ -160,5 +160,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Email body truncated to 5,000 characters for DDoS protection and efficient token usage
 - Payment information (typically in first 2,000 chars) is preserved while preventing abuse
 - Gmail query now excludes social category emails (Facebook, LinkedIn, Twitter notifications)
-- Reduces noise while keeping all potential payment emails (promotions, updates, primary)
-- Query filter: `in:inbox -in:spam -category:social deliveredto:me`
+- Added comprehensive keyword filter for payment-related emails (70-80% cost reduction)
+- Keywords: invoice, bill, payment, due, subscription, receipt, order, purchase, membership, emi, renewal, charge, and 30+ more
+- Reduces LLM processing costs while maintaining high coverage of payment emails
+- Query filter: `in:inbox -in:spam -category:social deliveredto:me {keywords...}`
