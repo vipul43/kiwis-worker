@@ -78,6 +78,8 @@ Defaults (in code):
 - Email batch size: 50 emails per fetch
 - Max emails per account: 10,000
 - Historical sync: 1 year of emails
+- LLM batch size: 3 emails per batch
+- Email body limit: 5,000 characters (DDoS protection)
 
 ## Database Schema
 
@@ -269,15 +271,50 @@ processing (retry)
    - ✅ Email date parsing (multiple formats)
    - ✅ Token storage and updates in database
 
+## LLM Payment Extraction
+
+### How It Works
+
+1. **Email Sync**: Fetches message IDs from Gmail (lightweight, fast)
+2. **LLM Sync**: Fetches full emails on-demand and sends to OpenRouter
+3. **Payment Extraction**: LLM extracts structured payment data
+4. **Storage**: Valid payments stored in payments table
+
+### Data Sent to LLM
+
+For each email, we send:
+- **From**: Sender email address
+- **Subject**: Email subject line
+- **Body**: Plain text body (first 5,000 characters)
+
+**Why plain text?**
+- Smaller token count (no HTML markup)
+- Faster LLM processing
+- Lower costs
+- Cleaner data without HTML tags and styling
+
+**Why 5,000 character limit?**
+- DDoS protection against extremely long emails
+- Efficient token usage (~1,250 tokens per email)
+- Payment info is typically in first 2,000 characters
+- Allows 3 emails per batch within reasonable limits
+
+### OpenRouter Configuration
+
+Add to `.env`:
+```
+OPENROUTER_API_KEY="sk-or-v1-..."
+```
+
+The service uses your OpenRouter account's default model. You can change the model in OpenRouter settings without code changes.
+
 ## Next Steps
 
-1. **Implement LLM sync job table** for payment extraction tracking
+1. **Setup Gmail webhook** for real-time email notifications
 
-2. **Implement AI payment extraction** from email content using OpenRouter
+2. **Implement payment deduplication** across multiple tables
 
-3. **Store extracted payments** in payments table
-
-4. **Setup Gmail webhook** for real-time email notifications
+3. **Add payment status tracking** and notifications
 
 ## Technologies
 

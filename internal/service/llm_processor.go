@@ -13,7 +13,8 @@ import (
 )
 
 const (
-	LLMBatchSize = 3 // Process 3 LLM jobs at a time (free models are very slow, ~30-60s per email, 3 emails = ~3-5 minutes)
+	LLMBatchSize      = 3    // Process 3 LLM jobs at a time (free models are very slow, ~30-60s per email, 3 emails = ~3-5 minutes)
+	MaxEmailBodyChars = 5000 // Limit email body to 5000 characters for DDoS protection and efficient LLM processing
 )
 
 type LLMProcessor struct {
@@ -210,10 +211,17 @@ func (p *LLMProcessor) fetchEmail(ctx context.Context, accessToken string, messa
 		return nil, err
 	}
 
+	// Truncate body to prevent DDoS and reduce token usage
+	// Payment info is typically in the first part of the email
+	body := msg.BodyText
+	if len(body) > MaxEmailBodyChars {
+		body = body[:MaxEmailBodyChars]
+	}
+
 	return &openrouter.EmailData{
 		From:    msg.From,
 		Subject: msg.Subject,
-		Body:    msg.BodyText, // Use plain text for cleaner, more efficient LLM processing
+		Body:    body,
 	}, nil
 }
 
