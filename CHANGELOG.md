@@ -150,3 +150,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Email sync job `processed_at` now correctly updates when job completes (synced/completed/failed status)
 - Gmail date parsing now handles timezone names in parentheses (e.g., "Fri, 12 Dec 2025 09:49:36 +0000 (UTC)")
 - Date parser strips timezone name suffix before parsing to prevent "unable to parse date" errors
+
+
+### Changed
+
+- LLM payment extraction now uses plain text email body instead of HTML
+- Reduced token count and improved LLM processing efficiency by removing HTML markup
+- Cleaner data sent to LLM without HTML tags, styling, and formatting noise

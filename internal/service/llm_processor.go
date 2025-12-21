@@ -213,7 +213,7 @@ func (p *LLMProcessor) fetchEmail(ctx context.Context, accessToken string, messa
 	return &openrouter.EmailData{
 		From:    msg.From,
 		Subject: msg.Subject,
-		Body:    msg.BodyHTML, // Prefer HTML body for better formatting
+		Body:    msg.BodyText, // Use plain text for cleaner, more efficient LLM processing
 	}, nil
 }
 
