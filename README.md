@@ -207,7 +207,7 @@ Successfully completed job <id>
 - Fetches in **reverse chronological order** (newest first) for recent payment dues
 - Processes **one account at a time** (round-robin)
 - **Resumes from last page** if interrupted
-- Filters: **received emails only**, **excludes spam**
+- Filters: **inbox only**, **excludes spam and social category**, **primary recipient only (no CC)**
 - Limits: **10,000 emails max** or **1 year of history** per account
 
 ### Job Lifecycle
@@ -286,6 +286,26 @@ For each email, we send:
 - **From**: Sender email address
 - **Subject**: Email subject line
 - **Body**: Plain text body (first 5,000 characters)
+
+**Gmail Query Filters:**
+- `in:inbox` - Only inbox emails
+- `-in:spam` - Exclude spam
+- `-category:social` - Exclude social media notifications (Facebook, LinkedIn, Twitter, etc.)
+- `deliveredto:me` - Only emails where user is primary recipient (excludes CC'ed emails)
+- `after:YYYY/MM/DD` - Time-based filter (1 year for initial sync)
+
+**What gets excluded:**
+- Social media notifications
+- Spam emails
+- Emails where user is only CC'ed
+- Sent emails
+- Drafts and trash
+
+**What gets included:**
+- Primary inbox emails
+- Promotions (subscription renewals, e-commerce invoices)
+- Updates (order confirmations, booking confirmations)
+- All emails where user is in "To" field
 
 **Why plain text?**
 - Smaller token count (no HTML markup)

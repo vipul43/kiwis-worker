@@ -222,10 +222,12 @@ func (p *EmailProcessor) refreshToken(ctx context.Context, account *repository.A
 // buildGmailQuery builds the Gmail API query string based on sync type
 // Fetches emails in REVERSE chronological order (newest first) for recent payment dues
 // Only fetches emails where user is in "To" field (excludes CC'ed emails)
+// Excludes social category (pure noise with no payment emails)
 func (p *EmailProcessor) buildGmailQuery(job models.EmailSyncJob) string {
-	// Base query: only emails directly to user (not CC), exclude spam and sent
+	// Base query: only emails directly to user (not CC), exclude spam, sent, and social
 	// deliveredto:me ensures only emails where user is primary recipient
-	baseQuery := "in:inbox -in:spam deliveredto:me"
+	// -category:social excludes social media notifications (Facebook, LinkedIn, Twitter, etc.)
+	baseQuery := "in:inbox -in:spam -category:social deliveredto:me"
 
 	// Add time filter based on sync type
 	if job.SyncType == models.SyncTypeInitial {
@@ -238,7 +240,7 @@ func (p *EmailProcessor) buildGmailQuery(job models.EmailSyncJob) string {
 		baseQuery += fmt.Sprintf(" after:%s", afterDate)
 	}
 
-	log.Printf("Gmail query for job %s: %s (newest first, To: only)", job.ID, baseQuery)
+	log.Printf("Gmail query for job %s: %s (newest first, To: only, no social)", job.ID, baseQuery)
 	return baseQuery
 }
 
