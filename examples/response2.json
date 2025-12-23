@@ -1,0 +1,14 @@
+{
+  "merchant": "OpenAILLC",
+  "description": "Standing Instruction payment towards OpenAILLC",
+  "amount": 1999.0,
+  "currency": "INR",
+  "date": "2025-10-05T00:00:00+05:30",
+  "recurrence": null,
+  "status": "overdue",
+  "category": null,
+  "metadata": {
+    "standing_instruction_id": "Y1RmcHz4ei",
+    "card_last_four": "8000"
+  }
+}
