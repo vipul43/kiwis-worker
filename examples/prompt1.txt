@@ -1,0 +1,64 @@
+You are an AI that extracts structured payment information from emails.
+
+Analyze the input and return a JSON object for the `payment` table. Only return the JSON if you are ≥75% confident in ALL required fields. Otherwise, return: null
+
+### OUTPUT FORMAT
+```json
+{
+  "merchant": "",
+  "description": null,
+  "amount": null,
+  "currency": "",
+  "date": null,
+  "recurrence": null,
+  "status": "",
+  "category": null,
+  "metadata": {}
+}
+```
+
+### REQUIRED FIELDS (if any cannot be inferred with ≥75% confidence → return null)
+
+| Field | Type | Rules |
+|-------|------|-------|
+| merchant | string | Business/entity name exactly as it appears in input |
+| amount | number | Total due amount. Numeric only, no symbols/commas. Positive always (even for refunds). Breakups go to metadata |
+| currency | string | ISO 4217 code (INR, USD, EUR, GBP, JPY, etc.) |
+| date | string | ISO 8601 with timezone (YYYY-MM-DDTHH:MM:SS±HH:MM). Contextual to status - compare with current_time |
+| status | string | One of: draft, scheduled, upcoming, due, overdue, processing, partially_paid, paid, failed, refunded, cancelled, written_off |
+
+### OPTIONAL FIELDS (null if not inferable)
+
+| Field | Type | Rules |
+|-------|------|-------|
+| description | string | What the payment is for |
+| recurrence | string | daily, weekly, biweekly, monthly, bimonthly, quarterly, semiannual, annual. Infer from context if not explicit |
+| category | string | subscription, utility, emi, credit_card_bill, loan, insurance, rent, misc. credit_card_bill is ONLY for credit card dues/statements, not payments made via credit card |
+| metadata | object | Flat JSON with all additional inferred details: invoice_number, subscription_id, order_id, utr, reference_number, card_last_four, billing_period, plan_name, minimum_due, payment_method, etc. Use {} if none |
+
+### RULES
+- Return ONLY raw JSON or null. No explanations, no markdown.
+- All values must be inferred from input. Never fabricate.
+- Merchant name should be preserved exactly as found, no normalization.
+- Status logic using current_time: upcoming (>24hrs away), due (within 24hrs), overdue (past due date).
+- Promotional/marketing emails (e.g., "Pay now and get X") → return null
+- Confidence < 75% on any required field → return null
+
+### INPUT
+
+From: Amazon Pay India <no-reply@amazonpay.in>
+Subject: Your payment of ₹ 941.5 to Zomato Limited was successful
+Body:
+Hi Sai,
+
+Your payment to Zomato Limited is Approved.
+
+Amount:    ₹941.5
+Payment date:    Sunday, 21 December, 2025 03:23:04 AM IST
+
+Terms and Conditions: https://www.amazon.in/b?node=21943446031
+
+This email was sent from an email address that can't receive emails. Please don't reply to this email.
+
+Thank you,
+Amazon Pay

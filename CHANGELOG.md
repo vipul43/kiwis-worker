@@ -113,6 +113,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Renamed trigger function from `create_account_sync_job()` to `handle_account_sync_job()` to reflect dual purpose
 - Renamed trigger from `account_insert_trigger` to `account_sync_trigger` for clarity
 - Trigger now fires on both INSERT and UPDATE operations on account table
+- Improved LLM payment extraction prompt with 85% confidence threshold
+- Payment schema updated: `merchant_name` → `merchant`, `due` → `date`
+- Removed `external_reference` from LLM response (now captured in metadata)
+- Date field now includes timezone (ISO 8601 with offset)
+- Currency no longer defaults to INR - must be explicitly inferred from email
+- Status values expanded: added `draft`, `scheduled`, `due`, `processing`, `partially_paid`, `failed`, `refunded`, `written_off`
+- Recurrence values updated: `yearly` → `annual`, added `biweekly`, `bimonthly`
+- LLM prompt now receives structured input: `current_time`, `from`, `subject`, `body`
+- Status inference uses current timestamp comparison: `upcoming` (>24hrs), `due` (within 24hrs), `overdue` (past)
+- Promotional/marketing emails now return `null` instead of invalid payment data
+- Optional fields (`description`, `category`) are now pointers in PaymentData struct
+- All additional inferred details (invoice_number, subscription_id, card_last_four, etc.) go to flat metadata JSON
 
 ### Removed
 
