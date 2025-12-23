@@ -1,0 +1,166 @@
+You are an AI that extracts structured payment information from emails.
+
+Analyze the input and return a JSON object for the `payment` table. Only return the JSON if you are ≥75% confident in ALL required fields. Otherwise, return: null
+
+### OUTPUT FORMAT
+```json
+{
+  "merchant": "",
+  "description": null,
+  "amount": null,
+  "currency": "",
+  "date": null,
+  "recurrence": null,
+  "status": "",
+  "category": null,
+  "metadata": {}
+}
+```
+
+### REQUIRED FIELDS (if any cannot be inferred with ≥75% confidence → return null)
+
+| Field | Type | Rules |
+|-------|------|-------|
+| merchant | string | Business/entity name exactly as it appears in input |
+| amount | number | Total due amount. Numeric only, no symbols/commas. Positive always (even for refunds). Breakups go to metadata |
+| currency | string | ISO 4217 code (INR, USD, EUR, GBP, JPY, etc.) |
+| date | string | ISO 8601 with timezone (YYYY-MM-DDTHH:MM:SS±HH:MM). Contextual to status - compare with current_time |
+| status | string | One of: draft, scheduled, upcoming, due, overdue, processing, partially_paid, paid, failed, refunded, cancelled, written_off |
+
+### OPTIONAL FIELDS (null if not inferable)
+
+| Field | Type | Rules |
+|-------|------|-------|
+| description | string | What the payment is for |
+| recurrence | string | daily, weekly, biweekly, monthly, bimonthly, quarterly, semiannual, annual. Infer from context if not explicit |
+| category | string | subscription, utility, emi, credit_card_bill, loan, insurance, rent, misc. credit_card_bill is ONLY for credit card dues/statements, not payments made via credit card |
+| metadata | object | Flat JSON with all additional inferred details: invoice_number, subscription_id, order_id, utr, reference_number, card_last_four, billing_period, plan_name, minimum_due, payment_method, etc. Use {} if none |
+
+### RULES
+- Return ONLY raw JSON or null. No explanations, no markdown.
+- All values must be inferred from input. Never fabricate.
+- Merchant name should be preserved exactly as found, no normalization.
+- Status logic using current_time: upcoming (>24hrs away), due (within 24hrs), overdue (past due date).
+- Promotional/marketing emails (e.g., "Pay now and get X") → return null
+- Confidence < 75% on any required field → return null
+
+### INPUT
+
+current_time: Tue, 23 Dec 2025 18:39:00 GMT
+from: credit_cards@icicibank.com
+subject: Transaction alert for your ICICI Bank Credit Card
+body:
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+<title>ICICI Bank Online</title>
+</head>
+<body topmargin="0">
+<table width="650" border="0" align="center" cellpadding="0" cellspacing="0" style="font-size:0px;">
+  <tbody>
+    <tr>
+      <td><img src="https://www.icicibank.com/campaigns/mailers/june-2020/transaction-alert/images/top.jpg" width="650" height="86" /></td>
+    </tr>
+    <tr>
+      <td style="border-left:#e56e2e solid 1px;border-right:#e56e2e solid 1px"><table width="100%" border="0" align="center" cellpadding="0" cellspacing="0">
+        <tbody>
+          <tr>
+            <td style="padding:15px;"><table width="580" border="0" align="center" cellpadding="0" cellspacing="0">
+              <tr>
+                <td></td>
+                </tr>
+              <tr>
+                <td height="10" style="text-align:justify;"><font face="Zurich BT, Zurich Cn BT, Arial" color="#000000" style="font-size:14px">
+Dear Customer, <br />
+  <br /> Your ICICI Bank Credit Card XX8000 has been used for a transaction of INR 547.34 on Dec 23, 2025 at 10:15:33. Info: ZOMATO. <br /><br />
+  The Available Credit Limit on your card is INR 2,18,107.85 and Total Credit Limit is INR 3,00,000.00. </p>
+The above limits are a total of the limits of all the Credit Cards  issued to the primary card holder, including any supplementary cards.<br />
+<br />
+In case you have not done this transaction, to report it please call on  18002662 or SMS BLOCK space 8000 to 9215676766 from your registered mobile  number and if you are outside India, call on 04071403333. <br />
+<br />
+In case you require any further information, you may call our Customer Care or  write to us at <a href="mailto:customer.care@icicibank.com" style="color:#a41c2b;">customer.care@icicibank.com</a> <br />
+<br />
+Contact your RM @ Express Relationship Banking 022-44400000.<br />
+<br />
+<br />
+Never share your OTP, URN, CVV or passwords with  anyone even if the person claims to be a bank employee. <br />
+<br />
+Sincerely, <br />
+<br />
+Team ICICI Bank
+                </font></td>
+                </tr>
+              <tr>
+                <td height="10" style="text-align:justify;"></td>
+                </tr>
+              <tr>
+                <td height="1" bgcolor="#ded7bd"></td>
+                </tr>
+              <tr>
+                <td height="10" style="text-align:justify;"></td>
+                </tr><tr>	                <td height="10" style="text-align:justify;"><font face="Zurich BT, Zurich Cn BT, Arial" color="#000000" style="font-size:12px">This is an auto-generated e-mail. Please do not reply.<br />
+                  <br />
+                  Discover a new way of paying your Credit Card bills from your bank account anytime anywhere by using ICICI Bank iMobile Pay. GPRS users, SMS iMobile Pay to 56767661. For details, please <a href="https://www.icicibank.com/campaigns/mailers/june-2020/transaction-alert/click.html" target="_blank"> <font color="#a41c2b"> click here</font></a>. </font></td>
+                </tr>
+              <tr>
+                <td height="14"></td>
+                </tr>
+              <tr>
+                <td height="70" align="center"><a href="https://www.icicibank.com/campaigns/mailers/june-2020/transaction-alert/ed.html" target="_blank"><img src="https://www.icicibank.com/campaigns/mailers/june-2020/transaction-alert/images/middleimg.gif" width="580" border="0" height="142" class="mobile_img_width"  style="display:block;"/></a></td>
+                </tr>
+              <tr>
+                <td height="14"></td>
+                </tr>
+              <tr>
+                <td align="left" style="text-align:justify"><font face="Zurich BT, Zurich Cn BT, Arial" color="#000000" style="font-size:10px;">
+				</font></td>
+                </tr>
+              </table></td>
+          </tr>
+        </tbody>
+      </table></td>
+    </tr>
+    <tr>
+      <td><img src="https://www.icicibank.com/campaigns/mailers/june-2020/transaction-alert/images/bottom.gif" width="650" height="30" /></td>
+    </tr>
+    <tr>
+      <td height="25"><font face="Arial" color="#a41c2b" style="font-size:12px">Now banking is more convenient with: </font></td>
+    </tr>
+    <tr>
+      <td><table width="100%" border="0" cellspacing="0" cellpadding="0">
+        <tbody>
+          <tr>
+            <td width="6" align="right"><img src="https://www.icicibank.com/campaigns/mailers/june-2020/transaction-alert/images/BAleft.gif" width="6" height="48" /></td>
+            <td style="border-top:#a41c2b solid 1px;border-bottom:#a41c2b solid 1px"><table width="100%" border="0" cellpadding="0" cellspacing="0">
+              <tbody>
+                <tr> <td width="6%" height="35"><a href="https://www.icicibank.com/campaigns/mailers/june-2020/transaction-alert/1.html" target="_blank"><img src="https://www.icicibank.com/campaigns/mailers/june-2020/transaction-alert/images/bank.jpg" width="27" height="26" border="0" /></a></td>
+                  <td width="17%" height="35" style="border-right:#a41c2b solid 1px"><a href="https://www.icicibank.com/campaigns/mailers/june-2020/transaction-alert/1.html" target="_blank" style="text-decoration:none;"><font face="Arial" color="#000000" style="font-size:9px;text-decoration:none">More than
+                    5000<br />	Branches</font></a></td><td width="8%" height="35" align="center"><a href="https://www.icicibank.com/campaigns/mailers/june-2020/transaction-alert/2.html" target="_blank" style="text-decoration:none;"><img src="https://www.icicibank.com/campaigns/mailers/june-2020/transaction-alert/images/atm.jpg" width="28" height="27" border="0" /></a></td>
+                  <td width="9%" height="35" align="left" style="border-right:#a41c2b solid 1px"><font face="Arial" color="#000000" style="font-size:9px;text-decoration:none"><a href="https://www.icicibank.com/campaigns/mailers/june-2020/transaction-alert/2.html" target="_blank" style="text-decoration:none;"><font face="Arial" color="#000000" style="font-size:9px;text-decoration:none">24x7 ATM Services</font></a></font></td>
+                  <td width="8%" height="35" align="center"><a href="https://www.icicibank.com/campaigns/mailers/june-2020/transaction-alert/3.html" target="_blank" style="text-decoration:none;"><img src="https://www.icicibank.com/campaigns/mailers/june-2020/transaction-alert/images/phone.jpg" width="27" height="27" border="0" /></a></td>
+                  <td width="12%" height="35" align="left" style="border-right:#a41c2b solid 1px"><a href="https://www.icicibank.com/campaigns/mailers/june-2020/transaction-alert/3.html" target="_blank" style="text-decoration:none;"><font face="Arial" color="#000000" style="font-size:9px;text-decoration:none">Customer Care</font></a></td>
+                  <td width="8%" height="35" align="center"><a href="https://www.icicibank.com/campaigns/mailers/june-2020/transaction-alert/4.html" target="_blank" style="text-decoration:none;"><img src="https://www.icicibank.com/campaigns/mailers/june-2020/transaction-alert/images/mouse.jpg" width="27" height="26" border="0" /></a></td>
+                  <td width="13%" height="35" align="left" style="border-right:#a41c2b solid 1px"><a href="https://www.icicibank.com/campaigns/mailers/june-2020/transaction-alert/4.html" target="_blank" style="text-decoration:none;"><font face="Arial" color="#000000" style="font-size:9px;text-decoration:none">                    Internet Banking </font></a></td>
+                  <td width="8%" height="35" align="center"><a href="https://www.icicibank.com/campaigns/mailers/june-2020/transaction-alert/5.html" target="_blank"><img src="https://www.icicibank.com/campaigns/mailers/june-2020/transaction-alert/images/mobile.jpg" width="26" height="26" border="0" /></a></td>
+                  <td width="11%" height="35" align="left"><a href="https://www.icicibank.com/campaigns/mailers/june-2020/transaction-alert/5.html" target="_blank" style="text-decoration:none;"><font face="Arial" color="#000000" style="font-size:9px;text-decoration:none">iMobile Banking</font></a></td>
+                </tr> </tbody>
+            </table></td>
+            <td width="6" align="left"><img src="https://www.icicibank.com/campaigns/mailers/june-2020/transaction-alert/images/BAright.gif" width="6" height="48" /></td>
+          </tr>
+        </tbody>
+      </table></td>
+    </tr>
+    <tr>
+      <td height="8"></td>
+    </tr>
+    <tr>
+      <td style="text-align:justify"><font face="Zurich BT, Zurich Cn BT, Arial" color="#000000" style="font-size:10px;"><a href="https://www.icicibank.com/campaigns/mailers/june-2020/transaction-alert/disclaimerview.html" target="_blank" style="color:#a41c2b;">Disclaimer </font></td>
+    </tr>
+    <tr>
+      <td height="8"></td>
+    </tr>
+  </tbody>
+</table>
+</body>
+</html>
