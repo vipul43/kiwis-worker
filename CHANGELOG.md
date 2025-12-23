@@ -125,6 +125,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Promotional/marketing emails now return `null` instead of invalid payment data
 - Optional fields (`description`, `category`) are now pointers in PaymentData struct
 - All additional inferred details (invoice_number, subscription_id, card_last_four, etc.) go to flat metadata JSON
+- LLM payment extraction now uses plain text email body instead of HTML
+- Reduced token count and improved LLM processing efficiency by removing HTML markup
+- Cleaner data sent to LLM without HTML tags, styling, and formatting noise
+- Email body truncated to 5,000 characters for DDoS protection and efficient token usage
+- Payment information (typically in first 2,000 chars) is preserved while preventing abuse
+- Gmail query now excludes social category emails (Facebook, LinkedIn, Twitter notifications)
+- Added comprehensive keyword filter for payment-related emails (70-80% cost reduction)
+- Keywords: invoice, bill, payment, due, subscription, receipt, order, purchase, membership, emi, renewal, charge, and 30+ more
+- Reduces LLM processing costs while maintaining high coverage of payment emails
+- Query filter: `in:inbox -in:spam -category:social deliveredto:me {keywords...}`
+- Removed default value 'INR' from payment.currency column
+- Currency must now be explicitly provided by LLM (no assumptions)
+- Changed payment.date column from TIMESTAMP to TIMESTAMPTZ (timestamp with timezone)
 
 ### Removed
 
@@ -162,17 +175,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Email sync job `processed_at` now correctly updates when job completes (synced/completed/failed status)
 - Gmail date parsing now handles timezone names in parentheses (e.g., "Fri, 12 Dec 2025 09:49:36 +0000 (UTC)")
 - Date parser strips timezone name suffix before parsing to prevent "unable to parse date" errors
-
-
-### Changed
-
-- LLM payment extraction now uses plain text email body instead of HTML
-- Reduced token count and improved LLM processing efficiency by removing HTML markup
-- Cleaner data sent to LLM without HTML tags, styling, and formatting noise
-- Email body truncated to 5,000 characters for DDoS protection and efficient token usage
-- Payment information (typically in first 2,000 chars) is preserved while preventing abuse
-- Gmail query now excludes social category emails (Facebook, LinkedIn, Twitter notifications)
-- Added comprehensive keyword filter for payment-related emails (70-80% cost reduction)
-- Keywords: invoice, bill, payment, due, subscription, receipt, order, purchase, membership, emi, renewal, charge, and 30+ more
-- Reduces LLM processing costs while maintaining high coverage of payment emails
-- Query filter: `in:inbox -in:spam -category:social deliveredto:me {keywords...}`
