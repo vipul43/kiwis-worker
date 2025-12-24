@@ -138,6 +138,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed default value 'INR' from payment.currency column
 - Currency must now be explicitly provided by LLM (no assumptions)
 - Changed payment.date column from TIMESTAMP to TIMESTAMPTZ (timestamp with timezone)
+- Migrated from raw SQL (database/sql + lib/pq) to GORM ORM for database operations
+- All repositories now use GORM for type-safe, SQL-injection-proof queries
+- Models updated with GORM tags for column mapping and table names
+- Added JSONB custom type for PostgreSQL JSONB columns (metadata, raw_llm_response)
+- Kept golang-migrate for manual migrations (CLI, Makefile) - GORM only used for queries
+- Removed go-sqlmock tests (incompatible with GORM), kept interface-based service tests
+- Account model moved from repository package to models package for consistency
 
 ### Removed
 

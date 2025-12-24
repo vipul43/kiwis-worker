@@ -178,8 +178,8 @@ func (p *LLMProcessor) processAccountJobs(ctx context.Context, accountID string,
 			Recurrence:     paymentData.Recurrence,
 			Status:         paymentData.Status,
 			Category:       paymentData.Category,
-			Metadata:       paymentData.Metadata,
-			RawLlmResponse: rawResp,
+			Metadata:       models.JSONB(paymentData.Metadata),
+			RawLlmResponse: models.JSONB(rawResp),
 			CreatedAt:      now,
 			UpdatedAt:      now,
 		}
@@ -233,7 +233,7 @@ func (p *LLMProcessor) isTokenExpired(expiresAt *time.Time) bool {
 }
 
 // refreshToken refreshes the access token and updates the account
-func (p *LLMProcessor) refreshToken(ctx context.Context, account *repository.Account) (string, error) {
+func (p *LLMProcessor) refreshToken(ctx context.Context, account *models.Account) (string, error) {
 	if account.RefreshToken == nil {
 		return "", fmt.Errorf("no refresh token available")
 	}

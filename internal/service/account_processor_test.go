@@ -6,14 +6,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/vipul43/kiwis-worker/internal/repository"
+	"github.com/vipul43/kiwis-worker/internal/models"
 )
 
 type mockAccountRepository struct {
-	getByIDFunc func(ctx context.Context, accountID string) (*repository.Account, error)
+	getByIDFunc func(ctx context.Context, accountID string) (*models.Account, error)
 }
 
-func (m *mockAccountRepository) GetByID(ctx context.Context, accountID string) (*repository.Account, error) {
+func (m *mockAccountRepository) GetByID(ctx context.Context, accountID string) (*models.Account, error) {
 	if m.getByIDFunc != nil {
 		return m.getByIDFunc(ctx, accountID)
 	}
@@ -23,8 +23,8 @@ func (m *mockAccountRepository) GetByID(ctx context.Context, accountID string) (
 func TestAccountProcessor_ProcessAccount_Success(t *testing.T) {
 	accessToken := "token123"
 	mockRepo := &mockAccountRepository{
-		getByIDFunc: func(ctx context.Context, accountID string) (*repository.Account, error) {
-			return &repository.Account{
+		getByIDFunc: func(ctx context.Context, accountID string) (*models.Account, error) {
+			return &models.Account{
 				ID:          accountID,
 				UserID:      "user-123",
 				AccessToken: &accessToken,
@@ -44,8 +44,8 @@ func TestAccountProcessor_ProcessAccount_Success(t *testing.T) {
 
 func TestAccountProcessor_ProcessAccount_MissingToken(t *testing.T) {
 	mockRepo := &mockAccountRepository{
-		getByIDFunc: func(ctx context.Context, accountID string) (*repository.Account, error) {
-			return &repository.Account{
+		getByIDFunc: func(ctx context.Context, accountID string) (*models.Account, error) {
+			return &models.Account{
 				ID:          accountID,
 				UserID:      "user-123",
 				AccessToken: nil, // Missing token
@@ -70,7 +70,7 @@ func TestAccountProcessor_ProcessAccount_MissingToken(t *testing.T) {
 
 func TestAccountProcessor_ProcessAccount_AccountNotFound(t *testing.T) {
 	mockRepo := &mockAccountRepository{
-		getByIDFunc: func(ctx context.Context, accountID string) (*repository.Account, error) {
+		getByIDFunc: func(ctx context.Context, accountID string) (*models.Account, error) {
 			return nil, errors.New("account not found")
 		},
 	}

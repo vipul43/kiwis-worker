@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/vipul43/kiwis-worker/internal/repository"
+	"github.com/vipul43/kiwis-worker/internal/models"
 )
 
 // AccountRepository interface for dependency injection
 type AccountRepository interface {
-	GetByID(ctx context.Context, accountID string) (*repository.Account, error)
+	GetByID(ctx context.Context, accountID string) (*models.Account, error)
 }
 
 type AccountProcessor struct {

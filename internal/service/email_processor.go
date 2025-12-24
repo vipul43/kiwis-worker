@@ -58,10 +58,10 @@ type EmailMessage struct {
 	BodyHTML       string
 	Snippet        string
 	Labels         []string
-	RawHeaders     map[string]interface{}
-	RawPayload     map[string]interface{}
+	RawHeaders     map[string]any
+	RawPayload     map[string]any
 	HasAttachments bool
-	Attachments    []map[string]interface{}
+	Attachments    []map[string]any
 }
 
 type TokenRefreshResult struct {
@@ -198,7 +198,7 @@ func (p *EmailProcessor) isTokenExpired(expiresAt *time.Time) bool {
 }
 
 // refreshToken refreshes the access token and updates the account
-func (p *EmailProcessor) refreshToken(ctx context.Context, account *repository.Account) (string, error) {
+func (p *EmailProcessor) refreshToken(ctx context.Context, account *models.Account) (string, error) {
 	if account.RefreshToken == nil {
 		return "", fmt.Errorf("no refresh token available")
 	}

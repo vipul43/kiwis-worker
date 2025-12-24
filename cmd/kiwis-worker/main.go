@@ -30,23 +30,27 @@ func run() error {
 		return err
 	}
 
-	// Connect to database
+	// Connect to database using GORM
 	db, err := database.Connect(cfg.DatabaseURL)
 	if err != nil {
 		return err
 	}
-	defer db.Close()
 
-	log.Println("Database connected successfully")
+	// Get underlying sql.DB for cleanup
+	sqlDB, err := db.DB()
+	if err != nil {
+		return err
+	}
+	defer sqlDB.Close()
 
-	// Run migrations
+	// Run migrations using golang-migrate (separate from GORM)
 	log.Println("Running database migrations...")
-	if err := database.RunMigrations(db); err != nil {
+	if err := database.RunMigrations(sqlDB); err != nil {
 		return err
 	}
 	log.Println("Migrations completed successfully")
 
-	// Initialize repositories
+	// Initialize repositories with GORM
 	accountJobRepo := repository.NewAccountSyncJobRepository(db)
 	emailJobRepo := repository.NewEmailSyncJobRepository(db)
 	llmJobRepo := repository.NewLLMSyncJobRepository(db)

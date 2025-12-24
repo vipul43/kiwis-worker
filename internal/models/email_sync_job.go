@@ -21,16 +21,21 @@ const (
 )
 
 type EmailSyncJob struct {
-	ID            string
-	AccountID     string
-	Status        EmailSyncStatus
-	SyncType      EmailSyncType
-	EmailsFetched int
-	PageToken     *string
-	LastSyncedAt  *time.Time // NULL = never synced (new jobs get priority)
-	Attempts      int
-	LastError     *string
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
-	ProcessedAt   *time.Time
+	ID            string          `gorm:"column:id;primaryKey"`
+	AccountID     string          `gorm:"column:account_id;index"`
+	Status        EmailSyncStatus `gorm:"column:status;index"`
+	SyncType      EmailSyncType   `gorm:"column:sync_type"`
+	EmailsFetched int             `gorm:"column:emails_fetched"`
+	PageToken     *string         `gorm:"column:page_token"`
+	LastSyncedAt  *time.Time      `gorm:"column:last_synced_at"`
+	Attempts      int             `gorm:"column:attempts"`
+	LastError     *string         `gorm:"column:last_error"`
+	CreatedAt     time.Time       `gorm:"column:created_at"`
+	UpdatedAt     time.Time       `gorm:"column:updated_at"`
+	ProcessedAt   *time.Time      `gorm:"column:processed_at"`
+}
+
+// TableName specifies the table name for GORM
+func (EmailSyncJob) TableName() string {
+	return "email_sync_job"
 }

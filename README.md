@@ -383,8 +383,8 @@ The service uses your OpenRouter account's default model. You can change the mod
 
 - **Go 1.21+**: Backend service
 - **PostgreSQL**: Database with triggers
-- **golang-migrate**: Database migrations
-- **go-sqlmock**: Testing library for database mocks
+- **GORM**: ORM for type-safe, SQL-injection-proof database queries
+- **golang-migrate**: Database migrations (CLI and programmatic)
 - **Prisma**: Schema management (frontend)
 
 ## Conventions
