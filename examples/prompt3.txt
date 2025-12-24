@@ -1,0 +1,123 @@
+You are an AI that extracts structured payment information from emails.
+
+Analyze the input and return a JSON object for the `payment` table. Only return the JSON if you are ≥75% confident in ALL required fields. Otherwise, return: null
+
+### OUTPUT FORMAT
+```json
+{
+  "merchant": "",
+  "description": null,
+  "amount": null,
+  "currency": "",
+  "date": null,
+  "recurrence": null,
+  "status": "",
+  "category": null,
+  "metadata": {}
+}
+```
+
+### REQUIRED FIELDS (if any cannot be inferred with ≥75% confidence → return null)
+
+| Field | Type | Rules |
+|-------|------|-------|
+| merchant | string | Business/entity name exactly as it appears in input |
+| amount | number | Total due amount. Numeric only, no symbols/commas. Positive always (even for refunds). Breakups go to metadata |
+| currency | string | ISO 4217 code (INR, USD, EUR, GBP, JPY, etc.) |
+| date | string | ISO 8601 with timezone (YYYY-MM-DDTHH:MM:SS±HH:MM). Contextual to status - compare with current_time |
+| status | string | One of: draft, scheduled, upcoming, due, overdue, processing, partially_paid, paid, failed, refunded, cancelled, written_off |
+
+### OPTIONAL FIELDS (null if not inferable)
+
+| Field | Type | Rules |
+|-------|------|-------|
+| description | string | What the payment is for |
+| recurrence | string | daily, weekly, biweekly, monthly, bimonthly, quarterly, semiannual, annual. Infer from context if not explicit |
+| category | string | subscription, utility, emi, credit_card_bill, loan, insurance, rent, misc. credit_card_bill is ONLY for credit card dues/statements, not payments made via credit card |
+| metadata | object | Flat JSON with all additional inferred details: invoice_number, subscription_id, order_id, utr, reference_number, card_last_four, billing_period, plan_name, minimum_due, payment_method, etc. Use {} if none |
+
+### RULES
+- Return ONLY raw JSON or null. No explanations, no markdown.
+- All values must be inferred from input. Never fabricate.
+- Merchant name should be preserved exactly as found, no normalization.
+- Status logic using current_time: upcoming (>24hrs away), due (within 24hrs), overdue (past due date).
+- Promotional/marketing emails (e.g., "Pay now and get X") → return null
+- Confidence < 75% on any required field → return null
+
+### INPUT
+
+current_time: Tue, 23 Dec 2025 18:39:00 GMT
+from: nse_alerts@nse.co.in 
+subject: Funds/Securities Balance
+body:
+<html><head></head><body><p>Dear Investor,</p>
+<p>With reference to NSE circulars NSE/INSP/46704 dated December 17, 2020, and NSE/INSP/55039 dated December 28, 2022, Trading members are required to upload clients&#39; securities balance on a daily basis.</p>
+<p>Further, with reference to NCL circular NCL/CMPL/49348 dated Aug 20, 2021, and NSE circular NSE/INSP/49691 dated September 22, 2021, Members are required to upload disaggregated collateral information (segment-wise and asset type wise) at the client level to their Clearing corporations on a daily basis.</p>
+<p>Information pertaining to your fund and securities balance as on 13-12-25 provided by ZERODHA BROKING LIMITED along with the details of securities ISIN wise is attached.</p>
+<p>Please follow the procedure given below for opening the attachment:</p>
+<ol>
+<li>Click on the attachment provided with this mail.</li>
+<li>You will be prompted for your password.</li>
+<li>The password is your PAN number in upper case.</li>
+</ol>
+<p>Please note that negative number in the file represents debit balance/balance payable by you. <strong>Also, the funds and securities balances provided are what is maintained with your broker and does not include balance in your personal bank account and demat account.</strong></p>
+<p>You are advised to compare the funds, securities and commodities balances received from Exchange on a weekly basis with the balances in the weekly statement of accounts for funds, securities and commodities sent by the stockbroker for the respective date. In case you find any discrepancy in the balances, we advise you to take up the matter immediately with your Broker.You may contact customer service at <a href="https://track-email-aps1.in.kaleyra.io/track/click/d8e9f455c9f5406fb276e49c006e3412/1634004b78b84bab90ecbe217840f690">complaints@zerodha.com</a> or <a href="https://track-email-aps1.in.kaleyra.io/track/click/d8e9f455c9f5406fb276e49c006e3412/238ab919a6e446fa91c80f5993a411a6">08047181888</a>.</p>
+<p>In case of non-resolution of discrepancy by the broker, you may intimate the same to the Exchange at <a href="https://track-email-aps1.in.kaleyra.io/track/click/d8e9f455c9f5406fb276e49c006e3412/9a01c5939fc745ddb8069d6d9934cbdc">ignse@nse.co.in</a> or <strong>18002660050</strong> or register an online complaint at <a href="https://track-email-aps1.in.kaleyra.io/track/click/d8e9f455c9f5406fb276e49c006e3412/51c5a718d6274cb48c977f09384efb8a" target="_blank" rel="noopener">https://smartodr.in/login.</a></p>
+<p>The data is being provided to the clients on an &#34;as is&#34; and &#34;what-is&#34; basis as provided by the trading member. The Exchange shall not be liable for any delays, errors, omissions, commissions, inaccuracies in rendering the data. In no event shall the Exchange be liable for any damages, including without limitation direct or indirect, special, incidental, or consequential damages, losses or expenses arising in connection with the data provided by the Exchange through this facility.</p>
+<p>You are requested to note that in the event of trading member being declared as defaulter/expelled, all transactions executed on the exchange trading platform within 90 calendar days prior to the effective date of disablement of the trading member or after the latest monthly/quarterly settlement date, if any, in respect of the claimant whichever is later shall be considered eligible for compensation from IPFT subject to Rules, Byelaws, Regulations, guidelines etc. of the Exchange and SEBI circulars and subject to the appropriate norms laid down by the relevant Committee. For details, you may refer the policy hosted on the website <a href="https://track-email-aps1.in.kaleyra.io/track/click/d8e9f455c9f5406fb276e49c006e3412/49aa3b198a05420c8ce5666cc446efb8" target="_blank" rel="noopener">https://static.nseindia.com//s3fs-public/inline-files/Policy_for_evaluation_of_claims_0.pdf</a></p>
+<p><strong>For Information &amp; Education Purpose</strong></p>
+<p>We would like to draw your attention to &#34;SEBI vide circular dated April 04, 2022, wherein they have introduced the mechanism of “Demat Debit and Pledge Instruction (DDPI)”. The DDPI shall serve the same purpose of POA and significantly mitigate the misuse of POA. You should be aware that the stockbroker and depository participant cannot directly / indirectly compel the clients to execute the DDPI or deny services to the client if the client refuses to execute the DDPI.</p>
+<p>Please refer to SEBI Circular dated October 06, 2022, for the list of instructions which client can give to its stockbroker / depository participant. You may refer the following link for same: <a href="https://track-email-aps1.in.kaleyra.io/track/click/d8e9f455c9f5406fb276e49c006e3412/aaee7d5aea6b4234a3f58b0810ee789b" target="_blank" rel="noopener">https://www.sebi.gov.in/legal/circulars/oct-2022/execution-of-demat-debit-and-pledge-instruction-ddpi-for-transfer-of-securities-towards-deliveries-settlement-obligations-and-pledging-re-pledging-of-securities-clarification_63724.html</a> Should you wish to give any instructions, these need to be signed in physical against each purpose of DDPI. In case of an eSign option is made available, client should be given an option to choose the specific purpose(s) of DDPI&#34;.</p>
+<div><strong> Dos and Don’ts for Retail Investors: </strong></div>
+<div>
+<ol>
+<li>Please deal with SEBI registered intermediaries only. Ensure that you have complete knowledge of the products and the risks involved before investing.</li>
+<li>Offering fixed/guaranteed/regular returns/ capital protection schemes in stock markets whether written or oral is not allowed. Brokers or any of their representatives or Authorised Persons cannot enter into any loan agreement to pay interest on the funds/securities offered by you.</li>
+<li>Do not fall prey to emails, SMSs and online videos luring you to trade in stock/ securities / schemes promising high returns/profits.</li>
+<li>Ensure to fill all the required details in the &#39;KYC&#39; document by yourself and receive duly signed copy of your &#39;KYC&#39; documents from your broker.</li>
+<li>Trading in derivatives involves high risk and accordingly investors should understand the product well before trading in such segments/products.</li>
+<li>Opt for electronic (e-mail) contract notes/financial statements only if you are computer savvy and have your own e-mail account.</li>
+<li>Do not share your login ID, password, OTP, TPIN with any person including employees of the broker or Authorised Person under any circumstances.</li>
+<li>Ensure that all your trades are executed as per your instructions.</li>
+<li>Insure you receive the payout of funds and securities within 1 working day of settlement. In case you have chosen running account of funds, ensure your account is settled on first Friday/Saturday of every month / quarter as opted for.</li>
+<li>Dealing in cash is prohibited. Do not place any securities with the broker or associate of the broker or authorized person of the broker. Do not transfer securities as margin/ collateral to the broker and such securities only must be pledged from the client demat account.</li>
+<li>Opt for Demat Debit and Pledge Instruction (DDPI) only for transfer of securities for deliveries/settlement obligations, initiating pledging of securities for margins, and for mutual fund/open offer transactions on Exchange platform. DDPI/PoA are optional and should not be insisted on for opening the account.</li>
+<li>Always keep your mobile number and email id updated with your broker. Don&#39;t ignore any SMSs / e-mails with regards to contract notes/trades/funds and securities balances sent by broker/Exchange. Verify the details of the same and report discrepancy, if any, to your broker in writing immediately.</li>
+<li>Please verify the bank account details of the broker from the website of broker/Exchange before transferring funds to the broker. Starting October 1, 2025, you can make payments using standardized, validated, and exclusive UPI IDs. For more details: <a href="https://track-email-aps1.in.kaleyra.io/track/click/d8e9f455c9f5406fb276e49c006e3412/0043a15fd5544f7597b9485cc39bd5e4"><span style="font-size: 12.0pt; line-height: 107%; mso-ansi-language: EN-US;">https://www.sebi.gov.in/legal/circulars/jun-2025/adoption-of-standardised-validated-and-exclusive-upi-ids-for-payment-collection-by-sebi-registered-intermediaries-from-investors_94535.html</span></a></li>
+<li>Claims for funds or securities given to the broker under any arrangement/ agreement of indicative return or claims for funds, without transactions on the Exchange will not be accepted by the Exchange in case of default by your broker.</li>
+<li>For more details on Investor awareness, please visit-<a href="https://track-email-aps1.in.kaleyra.io/track/click/d8e9f455c9f5406fb276e49c006e3412/d691fe9daf5441a994253073dd9cefb2"><span style="font-size: 12.0pt; line-height: 107%; mso-ansi-language: EN-US;">www.nseindia.com/invest/investors-home</span></a></li>
+<li>For more information related to investments in securities market, please visit SEBI Investor Website - <a href="https://track-email-aps1.in.kaleyra.io/track/click/d8e9f455c9f5406fb276e49c006e3412/d1cf01cb5b7a47ff9d729c7a33ca31ea"><span style="font-size: 12.0pt; line-height: 107%; mso-ansi-language: EN-US;">https://investor.sebi.gov.in</span></a> and SEBI Saa₹thi Mobile App.</li>
+</ol>
+</div>
+<p> </p>
+<div><strong> निवेशक क्या करें और क्या न करें: </strong></div>
+<div>
+<ol>
+<li>कृपया सिर्फ सेबी के यहां रजिस्टर्ड इंटरमीडयरीज़ के साथ ही डील करें। निवेश करने से पहले तय कर लें कि आप प्रोडक्ट्स तथा सम्बंधित जोखिम के बारे में पूरी जानकारी रखते हैं।</li>
+<li>स्टॉक मार्केट में लिखित या मौखिक रूप से फिक्स्ड/ गारेंटेड/रेग्युलर रिटर्न्स/कैपिटल प्रोटेक्शन स्कीमों की ऑफर करने की अनुमति नहीं है। ब्रोकर्स या उनके किसी भी प्रतिनिधि या प्राधिकृत व्यक्तियों द्वारा आपके द्वारा ऑफर किए जाने वाले फंड्स /सिक्योरीटीज़ पर ब्याज के भुगतान के लिए लोन समझौता नहीं किया जा सकता है।</li>
+<li>हाई रिटर्न/लाभ का वादा करने वाले स्टॉक/सिक्योरीटीज़/स्कीमों में ट्रेड करने का लालच देने वाली ईमेल, एसएमएस तथा ऑनलाइन वीडियो पर भरोसा न करें।</li>
+<li>‘केवाईसी’ दस्तावेज़ में सभी आवश्यक ब्यौरा स्वयं ही भरें और अपने ब्रोकर से अपने ‘केवाईसी’ दस्तावेज़ों की विधिवत रूप से साइन की गई प्रति को प्राप्त करें।</li>
+<li>डेरिवेटिवट्रेडिंग में जोखिम होसकते हैं और निवेशकोंको किसी भी सम्बंधितउत्पाद में ट्रेड करनेसे पूर्व उसका पूर्ण ज्ञानऔर जानकारी लेना आवश्यक है |</li>
+<li>यदि आप कम्प्यूटर से बहुत भली-भांति परिचित हैं तथा आपका अपना ई-मेल अकाउंट है, केवल तभी ही इलेक्ट्रोनिक (ई-मेल) कॉन्ट्रेक्ट नोट्स / फाईनेंशियल स्टेटमेंट्स का विकल्प चुनें।</li>
+<li>किसी भी स्थिति में ब्रोकर के कर्मचारी या प्राधिकृत व्यक्ति सहित किसी भी व्यक्ति के साथ अपनी लॉगिन आईडी, पासवर्ड, ओटीपी और टी-पिन को साझा न करें।</li>
+<li>तय करें कि आपके सभी ट्रेड्स को आपके निर्देशों के अनुसार ही किया जाता है। एनएसई वेबसाइट पर ट्रेड वेरिफिकेशन सुविधा उपलब्ध है जिसे आपकी तरफ से किए गए ट्रेड्स को वेरीफाई करने के लिए इस्तेमाल कर सकते हैं।</li>
+<li>सुनिश्चित करें कि सेटलमेंट के 1 दिन के अंदर आपको फंड्स तथा सिक्योरीटीज़ का पेआउट मिल जाता है। यदि आपने फंड्स के रनिंग अकाउंट्स को चुना है, तो सुनिश्चित करें कि जैसा विकल्प चुना गया है, उसी के अनुसार आपके अकाउंट को हर महीने /तिमाही के पहले शुक्रवार/शनिवार को सेटल कर दिया जाता है।</li>
+<li>नकद सौदेबाजी प्रतिबंधित है। किसी भी सिक्योरीटीज़ को ब्रोकर या ब्रोकर के एसोसिएट या ब्रोकर के प्राधिकृत व्यक्ति को न दें। मार्जिन /कोलेट्रल के तौर पर सिक्योरीटीज़ को ब्रोकर को ट्रांसफर न करें तथा इस प्रकार की सिक्योरीटीज़ को केवल क्लाइंट डिमेट अकाउंट से ही प्लेज किया जाना चाहिए।</li>
+<li>डिलीवरी/सेटलमेंट बाध्यताओं के लिए सिक्योरीटीज़ के ट्रांसफर, मार्जिन के लिए सिक्योरीटीज़ को प्लेज करने की शुरुआत करने, तथा एक्सचेंज प्लेटफॉर्म पर म्यूचल फंड/ओपन ऑफर लेनदेनों के लिए ही डीडीपीआई (डिमेट डेबिट एण्ड प्लेज इंस्ट्रक्शन) का विकल्प चुनें। डीडीपीआई /पीओए वैकल्पिक हैं और अकाउंट खोलने के लिए उनके लिए जबरदस्ती नहीं की जानी चाहिए।</li>
+<li>अपने ब्रोकर के पास हमेशा अपने मोबाइल नम्बर तथा ईमेल आईडी को अपडेट रखें। ब्रोकर/एक्सचेंज द्वारा कॉन्ट्रेक्ट नोट्स/ट्रेड्स/फंड्स तथा सिक्योरीटीज़ बैलेंस के लिए भेजे गए एसएमएस /ईमेल को कभी भी नज़रअंदाज न करें। उसके ब्यौरे को सत्यापित कर लें और यदि कोई फर्क नज़र आता है, तो तत्काल अपने ब्रोकर को लिखित में उसकी सूचना दें।</li>
+<li>ब्रोकर को फंड्स ट्रांसफर करने से पहले ब्रोकर के बैंक अकाउंट ब्यौरे का सत्यापन ब्रोकर/एक्सचेंज की वेबसाइट से कर लें।1 अक्टूबर 2025 से आप मानकीकृत, सत्यापित और विशेष UPI आईडी का उपयोग करके भुगतान कर सकते हैं। अधिक जानकारी के लिए देखें: SEBI सर्कुलर लिंक: <a href="https://track-email-aps1.in.kaleyra.io/track/click/d8e9f455c9f5406fb276e49c006e3412/cac1645528084eed80cd37b63f38f30d"><span style="font-size: 12.0pt; line-height: 107%; mso-ansi-language: EN-US;">https://www.sebi.gov.in/legal/circulars/jun-2025/adoption-of-standardised-validated-and-exclusive-upi-ids-for-payment-collection-by-sebi-registered-intermediaries-from-investors_94535.html</span></a></li>
+<li>एक्सचेंज में लेनदेन के बिना, ब्रोकर को किसी भी समझौते/ भावी रिटर्न के समझौते या फंड्स के दावों के लिए दिए गए फंड्स या सिक्योरीटीज़ के दावों को एक्सचेंज द्वारा स्वीकार नहीं किया जाएगा यदि आपका ब्रोकर कोई डिफाल्ट करता है।</li>
+<li>निवेशक जागरूकता के संबंध में अधिक ब्यौरे के लिए कृपया निम्नलिखित को देखें-<a href="https://track-email-aps1.in.kaleyra.io/track/click/d8e9f455c9f5406fb276e49c006e3412/bb7d17b5d2cc4d20b8e887cbeb595333"><span style="font-size: 12.0pt; line-height: 107%; mso-ansi-language: EN-US;">www.nseindia.com/invest/investors-home</span></a></li>
+<li>प्रतिभूति बाजार में निवेश से संबंधित अधिक जानकारी के लिए कृपया सेबी निवेशक वेबसाइट <a href="https://track-email-aps1.in.kaleyra.io/track/click/d8e9f455c9f5406fb276e49c006e3412/27bd9a66dabe487983c0c0593b2c5e7a"><span style="font-size: 12.0pt; line-height: 107%; mso-ansi-language: EN-US;">https://investor.sebi.gov.in/</span></a> और सेबी सा₹थी / Saa₹thi मोबाइल ऐप पर जाएं।</li>
+</ol>
+</div>
+<p>We are glad to inform you that NSE for your convenience/comfort is providing links below on investment concepts, investor alerts, your rights and obligation as an investor.</p>
+<div><a href="https://track-email-aps1.in.kaleyra.io/track/click/d8e9f455c9f5406fb276e49c006e3412/ce3b54e186194861938a7be5ae2d9209"><span style="font-size: 12.0pt; line-height: 107%; mso-ansi-language: EN-US;">www.nseindia.com/invest/first-time-investor-know-your-rights</span></a></div>
+<div><a href="https://track-email-aps1.in.kaleyra.io/track/click/d8e9f455c9f5406fb276e49c006e3412/e21490189f8a4b4784644fb7f44ec3a0"><span style="font-size: 12.0pt; line-height: 107%; mso-ansi-language: EN-US;">www.nseindia.com/invest/first-time-investor-fraud-dos-and-donts</span></a></div>
+<div><a href="https://track-email-aps1.in.kaleyra.io/track/click/d8e9f455c9f5406fb276e49c006e3412/621298ad435d46b7807e5dfb9c56f90c"><span style="font-size: 12.0pt; line-height: 107%; mso-ansi-language: EN-US;">www.nseindia.com/invest/file-a-complaint-online</span></a></div>
+<p>You may also visit our website <a href="https://track-email-aps1.in.kaleyra.io/track/click/d8e9f455c9f5406fb276e49c006e3412/e9e1c5cf8db342e090a46d341fc40c1c" target="_blank" rel="noopener">www.nseindia.com</a> for any further information that you may require or email your queries to the email ID <a href="https://track-email-aps1.in.kaleyra.io/track/click/d8e9f455c9f5406fb276e49c006e3412/17b6d7f252654bc598de4d53a664d13d">ignse@nse.co.in</a>, quoting the name of your city in the subject. We would be glad to assist you.</p>
+<p><strong>Information to investors:</strong></p>
+<p>Exchange has introduced trading in Rights Entitlement w.e.f. May 20, 2020. The trades executed, if any, for Rights Entitlement in Capital Market shall form part of the attached file. Rights Entitlement should not be mistaken for ordinary shares and unless Rights Entitlement are exercised they will lose value and no rights (shares) will be available to the investor. The buyer of the Rights Entitlement is required to subscribe for the same before the Issue Closing Date, else the same will lapse and no shares will be allotted.</p>
+<p>In case you need any clarification, please feel free to call on our toll-free number <strong>1800 266 0050</strong> (select option 5 - UCI &amp; Trade Alerts). You can also email us at <a href="https://track-email-aps1.in.kaleyra.io/track/click/d8e9f455c9f5406fb276e49c006e3412/65d783d4fcf749b5a7e9a13a366645ed">uci@nse.co.in</a>, quoting your PAN, Mobile no. and your query.</p>
+<p>To learn more about Personal Finance, securities market, details of upcoming Investor Awareness Programs and more, please visit the SEBI Investor website at <a href="https://track-email-aps1.in.kaleyra.io/track/click/d8e9f455c9f5406fb276e49c006e3412/6913e24f631d4671a127365f20428695" target="_blank" rel="noopener">https://investor.sebi.gov.in</a></p>
+<p>Thanks and Regards,<br/>National Stock Exchange of India Limited</p><img src="https://open-email-aps1.in.kaleyra.io/track/open/d8e9f455c9f5406fb276e49c006e3412" style="display:none;"></body></html><br/><p>&nbsp;If you no longer wish to receive these emails, you may <a href="https://deliverytrack.email.in.kaleyra.io/trans/unsubscribe/d8e9f455c9f5406fb276e49c006e3412"><span style="text-decoration: underline;">unsubscribe here</span></a>.&nbsp;</p><p>&nbsp;If you believe this email is spam, <a href="https://deliverytrack.email.in.kaleyra.io/trans/unsubscribe/d8e9f455c9f5406fb276e49c006e3412"><span style="text-decoration: underline;">mark as spam</span></a>.&nbsp;</p>

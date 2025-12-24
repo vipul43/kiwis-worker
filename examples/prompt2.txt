@@ -1,0 +1,168 @@
+You are an AI that extracts structured payment information from emails.
+
+Analyze the input and return a JSON object for the `payment` table. Only return the JSON if you are ≥75% confident in ALL required fields. Otherwise, return: null
+
+### OUTPUT FORMAT
+```json
+{
+  "merchant": "",
+  "description": null,
+  "amount": null,
+  "currency": "",
+  "date": null,
+  "recurrence": null,
+  "status": "",
+  "category": null,
+  "metadata": {}
+}
+```
+
+### REQUIRED FIELDS (if any cannot be inferred with ≥75% confidence → return null)
+
+| Field | Type | Rules |
+|-------|------|-------|
+| merchant | string | Business/entity name exactly as it appears in input |
+| amount | number | Total due amount. Numeric only, no symbols/commas. Positive always (even for refunds). Breakups go to metadata |
+| currency | string | ISO 4217 code (INR, USD, EUR, GBP, JPY, etc.) |
+| date | string | ISO 8601 with timezone (YYYY-MM-DDTHH:MM:SS±HH:MM). Contextual to status - compare with current_time |
+| status | string | One of: draft, scheduled, upcoming, due, overdue, processing, partially_paid, paid, failed, refunded, cancelled, written_off |
+
+### OPTIONAL FIELDS (null if not inferable)
+
+| Field | Type | Rules |
+|-------|------|-------|
+| description | string | What the payment is for |
+| recurrence | string | daily, weekly, biweekly, monthly, bimonthly, quarterly, semiannual, annual. Infer from context if not explicit |
+| category | string | subscription, utility, emi, credit_card_bill, loan, insurance, rent, misc. credit_card_bill is ONLY for credit card dues/statements, not payments made via credit card |
+| metadata | object | Flat JSON with all additional inferred details: invoice_number, subscription_id, order_id, utr, reference_number, card_last_four, billing_period, plan_name, minimum_due, payment_method, etc. Use {} if none |
+
+### RULES
+- Return ONLY raw JSON or null. No explanations, no markdown.
+- All values must be inferred from input. Never fabricate.
+- Merchant name should be preserved exactly as found, no normalization.
+- Status logic using current_time: upcoming (>24hrs away), due (within 24hrs), overdue (past due date).
+- Promotional/marketing emails (e.g., "Pay now and get X") → return null
+- Confidence < 75% on any required field → return null
+
+### INPUT
+
+current_time: Tue, 23 Dec 2025 18:39:00 GMT
+from: cards@icicibank.com 
+subject: Upcoming payment notification: Standing Instructions on your ICICI Bank Credit Card
+body:
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+<title>ICICI Bank Online</title>
+</head>
+<body topmargin="0">
+<table width="650" border="0" align="center" cellpadding="0" cellspacing="0">
+  <tbody>
+    <tr>
+      <td><img src="https://www.icicibank.com/campaigns/mailers/2017-february/CC-services-mailer/images/top.jpg" width="650" height="86" /></td>
+    </tr>
+    <tr>
+      <td style="border-left:#e56e2e solid 1px;border-right:#e56e2e solid 1px"><table width="100%" border="0" align="center" cellpadding="0" cellspacing="0">
+        <tbody>
+          <tr>
+            <td style="padding:15px;"><table width="580" border="0" align="center" cellpadding="0" cellspacing="0"><tr>
+
+	<br />
+              <tr>
+                <td></td>
+                </tr>
+              <tr>
+                <td height="10" style="text-align:justify;"><font face="Mulish semibold, Arial, Arial" color="#000000" style="font-size:14px"> Dear Customer,<br />
+                  <br />
+
+
+              <br />
+
+Your payment of INR 1999.00 towards OpenAILLC through Standing Instruction Y1RmcHz4ei is due on 05/10/2025 and will be debited from your ICICI Bank Credit Card 8000.
+
+<a href="https://www.icicibank.com/disclaimer/merchant-standing-instructions?ITM=nli_cms_CC_manage_standing_instructions_menu_navigation_btn">Click here</a>  to cancel this Debit or your Standing Instruction.
+
+<T&Cs>
+<Disclaimer>
+ <br />
+
+
+<br />
+
+                  <br />
+                  Sincerely,<br />
+                  <br />
+                 ICICI Bank Limited.</font></td>
+                </tr>
+              <tr>
+                <td height="10" style="text-align:justify;">&nbsp;</td>
+                </tr>
+              <tr>
+                <td height="1" bgcolor="#ded7bd"></td>
+                </tr>
+              <tr>
+                <td height="10" style="text-align:justify;">&nbsp;</td>
+                </tr>
+              <tr>
+                <td height="10" style="text-align:justify;"><font face="Mulish semibold, Arial, Arial" color="#000000" style="font-size:12px">
+This is a system generated e-mail. Please do not reply to this e-mail. <br />
+<br />
+<br />
+CONFIDENTIALITY INFORMATION AND DISCLAIMER
+<br />
+This e-mail message and its attachments may contain confidential, proprietary or legally privileged information and is intended solely for the use of the individual or entity to whom it is addressed. If you have erroneously received this message, please delete it immediately and notify the sender. If you are not the intended recipient of the e-mail message you should not disseminate, distribute or copy this e-mail. E-mail transmission cannot be guaranteed to be secure or error-free as information could be intercepted, corrupted, lost, destroyed, incomplete or contain viruses and the ICICI Bank accepts no liability for any damage caused by the limitations of the e-mail transmission.
+	         </table></td>
+          </tr>
+        </tbody>
+      </table></td>
+    </tr>
+    <tr>
+      <td><img src="https://www.icicibank.com/campaigns/mailers/2017-february/CC-services-mailer/images/bottom.gif" width="650" height="30" /></td>
+    </tr>
+    <tr>
+      <td height="25"><font face="Arial" color="#a41c2b" style="font-size:12px">Now banking is more convenient with: </font></td>
+    </tr>
+    <tr>
+      <td><table width="100%" border="0" cellspacing="0" cellpadding="0">
+        <tbody>
+          <tr>
+            <td width="6" align="right"><img src="https://www.icicibank.com/campaigns/mailers/2017-february/CC-services-mailer/images/BAleft.gif" width="6" height="48" /></td>
+            <td style="border-top:#a41c2b solid 1px;border-bottom:#a41c2b solid 1px"><table width="100%" border="0" cellpadding="0" cellspacing="0">
+              <tbody>
+                <tr>
+                  <td width="6%" height="35"><a href="https://www.icicibank.com/campaigns/mailers/2017-february/CC-services-mailer/1.htm" target="_blank"><img src="https://www.icicibank.com/campaigns/mailers/2017-february/CC-services-mailer/images/bank.jpg" width="27" height="26" border="0" /></a></td>
+                  <td width="17%" height="35" style="border-right:#a41c2b solid 1px"><a href="https://www.icicibank.com/campaigns/mailers/2017-february/CC-services-mailer/1.htm" target="_blank"><font face="Arial" color="#000000" style="font-size:9px;text-decoration:none">
+                    More than 4000 Branches</font></a></td>
+                  <td width="8%" height="35" align="center"><a href="https://www.icicibank.com/campaigns/mailers/2017-february/CC-services-mailer/2.htm" target="_blank"><img src="https://www.icicibank.com/campaigns/mailers/2017-february/CC-services-mailer/images/atm.jpg" width="28" height="27" border="0" /></a></td>
+                  <td width="9%" height="35" align="left" style="border-right:#a41c2b solid 1px"><font face="Arial" color="#000000" style="font-size:9px;text-decoration:none"><a href="https://www.icicibank.com/campaigns/mailers/2017-february/CC-services-mailer/2.htm" target="_blank"><font face="Arial" color="#000000" style="font-size:9px;text-decoration:none">24x7 ATM Services</font></a></font></td>
+                  <td width="8%" height="35" align="center"><a href="https://www.icicibank.com/campaigns/mailers/2017-february/CC-services-mailer/3.htm" target="_blank"><img src="https://www.icicibank.com/campaigns/mailers/2017-february/CC-services-mailer/images/phone.jpg" width="27" height="27" border="0" /></a></td>
+                  <td width="12%" height="35" align="left" style="border-right:#a41c2b solid 1px"><a href="https://www.icicibank.com/campaigns/mailers/2017-february/CC-services-mailer/3.htm" target="_blank"><font face="Arial" color="#000000" style="font-size:9px;text-decoration:none">
+                    Customer Care</font></a></td>
+                  <td width="8%" height="35" align="center"><a href="https://www.icicibank.com/campaigns/mailers/2017-february/CC-services-mailer/4.htm" target="_blank"><img src="https://www.icicibank.com/campaigns/mailers/2017-february/CC-services-mailer/images/mouse.jpg" width="27" height="26" border="0" /></a></td>
+                  <td width="13%" height="35" align="left" style="border-right:#a41c2b solid 1px"><a href="https://www.icicibank.com/campaigns/mailers/2017-february/CC-services-mailer/4.htm" target="_blank"><font face="Arial" color="#000000" style="font-size:9px;text-decoration:none">
+                    Internet Banking </font></a></td>
+                  <td width="8%" height="35" align="center"><a href="https://www.icicibank.com/campaigns/mailers/2017-february/CC-services-mailer/5.htm" target="_blank"><img src="https://www.icicibank.com/campaigns/mailers/2017-february/CC-services-mailer/images/mobile.jpg" width="26" height="26" border="0" /></a></td>
+                  <td width="11%" height="35" align="left"><a href="https://www.icicibank.com/campaigns/mailers/2017-february/CC-services-mailer/5.htm" target="_blank"><font face="Arial" color="#000000" style="font-size:9px;text-decoration:none">Mobile Banking </font></a></td>
+                </tr>
+              </tbody>
+            </table></td>
+            <td width="6" align="left"><img src="https://www.icicibank.com/campaigns/mailers/2017-february/CC-services-mailer/images/BAright.gif" width="6" height="48" /></td>
+          </tr>
+        </tbody>
+      </table></td>
+    </tr>
+    <tr>
+      <td height="8"></td>
+    </tr>
+    <tr>
+
+       </font></td>
+    </tr>
+    <tr>
+      <td height="8"></td>
+    </tr>
+  </tbody>
+</table>
+</body>
+</html>

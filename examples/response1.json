@@ -1,0 +1,13 @@
+{
+  "merchant": "Zomato Limited",
+  "description": "Your payment of ₹941.5 to Zomato Limited was successful",
+  "amount": 941.5,
+  "currency": "INR",
+  "date": "2025-12-21T03:23:04+05:30",
+  "recurrence": null,
+  "status": "paid",
+  "category": "misc",
+  "metadata": {
+    "payment_method": "Amazon Pay"
+  }
+}

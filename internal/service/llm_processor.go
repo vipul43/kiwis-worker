@@ -146,21 +146,21 @@ func (p *LLMProcessor) processAccountJobs(ctx context.Context, accountID string,
 		rawResp := rawResponses[i]
 
 		// Check if it's a valid payment
-		if paymentData.MerchantName == "" || paymentData.Amount == nil {
+		if paymentData.Merchant == "" || paymentData.Amount == nil {
 			// Not a payment email, mark job as completed
 			log.Printf("Email %s is not a payment email, marking as completed", job.MessageID)
 			_ = p.llmSyncJobRepo.UpdateStatus(ctx, job.ID, models.LLMStatusCompleted, nil)
 			continue
 		}
 
-		// Parse due date
-		dueDate, err := time.Parse(time.RFC3339, paymentData.Due)
+		// Parse date
+		paymentDate, err := time.Parse(time.RFC3339, paymentData.Date)
 		if err != nil {
-			// Try alternative format
-			dueDate, err = time.Parse("2006-01-02T15:04:05", paymentData.Due)
+			// Try alternative format without timezone
+			paymentDate, err = time.Parse("2006-01-02T15:04:05", paymentData.Date)
 			if err != nil {
-				log.Printf("Failed to parse due date %s: %v", paymentData.Due, err)
-				errMsg := fmt.Sprintf("failed to parse due date: %v", err)
+				log.Printf("Failed to parse date %s: %v", paymentData.Date, err)
+				errMsg := fmt.Sprintf("failed to parse date: %v", err)
 				_ = p.llmSyncJobRepo.UpdateStatus(ctx, job.ID, models.LLMStatusFailed, &errMsg)
 				continue
 			}
@@ -168,21 +168,20 @@ func (p *LLMProcessor) processAccountJobs(ctx context.Context, accountID string,
 
 		// Create payment
 		payment := models.Payment{
-			ID:                uuid.New().String(),
-			AccountID:         accountID,
-			Merchant:          paymentData.MerchantName,
-			Description:       stringPtr(paymentData.Description),
-			Amount:            *paymentData.Amount,
-			Currency:          paymentData.Currency,
-			Date:              dueDate,
-			Recurrence:        paymentData.Recurrence,
-			Status:            paymentData.Status,
-			Category:          stringPtr(paymentData.Category),
-			ExternalReference: stringPtr(paymentData.ExternalReference),
-			Metadata:          paymentData.Metadata,
-			RawLlmResponse:    rawResp,
-			CreatedAt:         now,
-			UpdatedAt:         now,
+			ID:             uuid.New().String(),
+			AccountID:      accountID,
+			Merchant:       paymentData.Merchant,
+			Description:    paymentData.Description,
+			Amount:         *paymentData.Amount,
+			Currency:       paymentData.Currency,
+			Date:           paymentDate,
+			Recurrence:     paymentData.Recurrence,
+			Status:         paymentData.Status,
+			Category:       paymentData.Category,
+			Metadata:       paymentData.Metadata,
+			RawLlmResponse: rawResp,
+			CreatedAt:      now,
+			UpdatedAt:      now,
 		}
 
 		paymentsToCreate = append(paymentsToCreate, payment)
@@ -253,12 +252,4 @@ func (p *LLMProcessor) refreshToken(ctx context.Context, account *repository.Acc
 	log.Printf("Token refreshed for account %s, expires at %s", account.ID, result.ExpiresAt)
 
 	return result.AccessToken, nil
-}
-
-// Helper function for pointer conversion
-func stringPtr(s string) *string {
-	if s == "" {
-		return nil
-	}
-	return &s
 }

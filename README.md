@@ -277,15 +277,43 @@ processing (retry)
 
 1. **Email Sync**: Fetches message IDs from Gmail (lightweight, fast)
 2. **LLM Sync**: Fetches full emails on-demand and sends to OpenRouter
-3. **Payment Extraction**: LLM extracts structured payment data
+3. **Payment Extraction**: LLM extracts structured payment data with 85% confidence threshold
 4. **Storage**: Valid payments stored in payments table
+
+### Extracted Payment Fields
+
+**Required fields** (if any cannot be inferred with ≥85% confidence, returns null):
+| Field | Description |
+|-------|-------------|
+| `merchant` | Business/entity name exactly as it appears in email |
+| `amount` | Total due amount (numeric, positive even for refunds) |
+| `currency` | ISO 4217 code (INR, USD, EUR, etc.) - must be explicitly inferable |
+| `date` | ISO 8601 with timezone, contextual to status |
+| `status` | draft, scheduled, upcoming, due, overdue, processing, partially_paid, paid, failed, refunded, cancelled, written_off |
+
+**Optional fields** (null if not inferable):
+| Field | Description |
+|-------|-------------|
+| `description` | What the payment is for |
+| `recurrence` | daily, weekly, biweekly, monthly, bimonthly, quarterly, semiannual, annual |
+| `category` | subscription, utility, emi, credit_card_bill, loan, insurance, rent, misc |
+| `metadata` | Flat JSON with additional details (invoice_number, card_last_four, etc.) |
+
+**Status Logic:**
+- `upcoming`: Due date >24hrs away
+- `due`: Due date within 24hrs
+- `overdue`: Due date has passed
+- Other statuses inferred from email context (paid, failed, refunded, etc.)
+
+**Note:** `credit_card_bill` category is ONLY for credit card dues/statements, not payments made via credit card.
 
 ### Data Sent to LLM
 
 For each email, we send:
-- **From**: Sender email address
-- **Subject**: Email subject line
-- **Body**: Plain text body (first 5,000 characters)
+- **current_time**: Current timestamp with timezone (for status inference)
+- **from**: Sender email address
+- **subject**: Email subject line
+- **body**: Plain text body (first 5,000 characters)
 
 **Gmail Query Filters:**
 - `in:inbox` - Only inbox emails

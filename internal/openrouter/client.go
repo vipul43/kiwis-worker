@@ -45,16 +45,15 @@ type EmailData struct {
 
 // PaymentData represents the extracted payment information
 type PaymentData struct {
-	MerchantName      string                 `json:"merchant_name"`
-	Description       string                 `json:"description"`
-	Amount            *float64               `json:"amount"`
-	Currency          string                 `json:"currency"`
-	Due               string                 `json:"due"`
-	Recurrence        *string                `json:"recurrence"`
-	Status            string                 `json:"status"`
-	Category          string                 `json:"category"`
-	ExternalReference string                 `json:"external_reference"`
-	Metadata          map[string]interface{} `json:"metadata"`
+	Merchant    string                 `json:"merchant"`
+	Description *string                `json:"description"`
+	Amount      *float64               `json:"amount"`
+	Currency    string                 `json:"currency"`
+	Date        string                 `json:"date"`
+	Recurrence  *string                `json:"recurrence"`
+	Status      string                 `json:"status"`
+	Category    *string                `json:"category"`
+	Metadata    map[string]interface{} `json:"metadata"`
 }
 
 // BatchExtractPayments extracts payment information from multiple emails using OpenRouter batch API
@@ -160,6 +159,11 @@ func (c *Client) ExtractPayment(ctx context.Context, email EmailData) (*PaymentD
 	// Clean the content (remove markdown code blocks if present)
 	cleanedContent := c.cleanJSONResponse(content)
 
+	// Check if LLM returned null (low confidence or not a payment email)
+	if cleanedContent == "null" || cleanedContent == "" {
+		return nil, rawResponse, nil
+	}
+
 	// Parse payment data from LLM response
 	var paymentData PaymentData
 	if err := json.Unmarshal([]byte(cleanedContent), &paymentData); err != nil {
@@ -168,7 +172,6 @@ func (c *Client) ExtractPayment(ctx context.Context, email EmailData) (*PaymentD
 
 	// Validate required fields
 	if !c.isValidPayment(paymentData) {
-		// Not a payment email or missing required fields
 		return nil, rawResponse, nil
 	}
 
@@ -178,6 +181,11 @@ func (c *Client) ExtractPayment(ctx context.Context, email EmailData) (*PaymentD
 // cleanJSONResponse removes markdown code blocks and extra whitespace from LLM response
 func (c *Client) cleanJSONResponse(content string) string {
 	content = strings.TrimSpace(content)
+
+	// Check for null response first
+	if content == "null" {
+		return "null"
+	}
 
 	// Find the first { and last } to extract just the JSON object
 	startIdx := strings.Index(content, "{")
@@ -196,90 +204,63 @@ func (c *Client) cleanJSONResponse(content string) string {
 
 // buildPrompt builds the LLM prompt from email data
 func (c *Client) buildPrompt(email EmailData) string {
-	return fmt.Sprintf(`You are an AI that extracts structured upcoming-payment information from emails, messages, invoices, or notifications.
+	currentTime := time.Now().Format(time.RFC3339)
 
-Your job is to analyze the given text and return a STRICT JSON object containing the fields required to populate the upcoming_payments table.
+	return fmt.Sprintf(`You are an AI that extracts structured payment information from emails.
 
-### OUTPUT FORMAT (STRICT JSON ONLY)
-Return JSON with these keys:
+Analyze the input and return a JSON object for the payment table. Only return the JSON if you are ≥75%% confident in ALL required fields. Otherwise, return: null
 
+### OUTPUT FORMAT
 {
-  "merchant_name": "",
-  "description": "",
+  "merchant": "",
+  "description": null,
   "amount": null,
   "currency": "",
-  "due": "",
+  "date": null,
   "recurrence": null,
   "status": "",
-  "category": "",
-  "external_reference": "",
+  "category": null,
   "metadata": {}
 }
 
-### FIELD DEFINITIONS
+### REQUIRED FIELDS (if any cannot be inferred with ≥75%% confidence → return null)
 
-merchant_name  
-- The business or entity requesting payment (e.g., "Netflix", "Amazon Pay", "HDFC Bank").
+| Field | Type | Rules |
+|-------|------|-------|
+| merchant | string | Business/entity name exactly as it appears in input |
+| amount | number | Total due amount. Numeric only, no symbols/commas. Positive always (even for refunds). Breakups go to metadata |
+| currency | string | ISO 4217 code (INR, USD, EUR, GBP, JPY, etc.) |
+| date | string | ISO 8601 with timezone (YYYY-MM-DDTHH:MM:SS±HH:MM). Contextual to status - compare with current_time |
+| status | string | One of: draft, scheduled, upcoming, due, overdue, processing, partially_paid, paid, failed, refunded, cancelled, written_off |
 
-description  
-- Short natural-language description of what the payment is for.
+### OPTIONAL FIELDS (null if not inferable)
 
-amount  
-- Numeric value only. Do NOT include commas or currency symbols.
+| Field | Type | Rules |
+|-------|------|-------|
+| description | string | What the payment is for |
+| recurrence | string | daily, weekly, biweekly, monthly, bimonthly, quarterly, semiannual, annual. Infer from context if not explicit |
+| category | string | subscription, utility, emi, credit_card_bill, loan, insurance, rent, misc. credit_card_bill is ONLY for credit card dues/statements, not payments made via credit card |
+| metadata | object | Flat JSON with all additional inferred details: invoice_number, subscription_id, order_id, utr, reference_number, card_last_four, billing_period, plan_name, minimum_due, payment_method, etc. Use {} if none |
 
-currency  
-- Infer from text: INR, USD, EUR, GBP, etc. Default to INR if unclear.
+### RULES
+- Return ONLY raw JSON or null. No explanations, no markdown.
+- All values must be inferred from input. Never fabricate.
+- Merchant name should be preserved exactly as found, no normalization.
+- Status logic using current_time: upcoming (>24hrs away), due (within 24hrs), overdue (past due date).
+- Promotional/marketing emails (e.g., "Pay now and get X") → return null
+- Confidence < 75%% on any required field → return null
 
-due  
-- The next due date/time in ISO 8601 format: YYYY-MM-DDTHH:MM:SS  
-  If only a date is available, use "T00:00:00".
-
-recurrence  
-- one of: null, "monthly", "yearly", "weekly", "daily", "quarterly", "semiannual"
-- If subscription-like, infer the correct recurrence.
-
-status  
-- one of: "upcoming", "due_soon", "overdue", "paid", "cancelled"  
-- Default: "upcoming"
-
-category  
-- One of: "subscription", "utility", "emi", "credit_card_bill", "loan", "insurance", "rent", "misc"  
-- Infer logically.
-
-external_reference  
-- Invoice number, subscription ID, bill number, reference ID, order number, UTR, etc.  
-- Null if unavailable.
-
-metadata  
-- JSON object with ANY additional important details:
-  - billing period
-  - statement date
-  - last payment date
-  - plan name
-  - card used
-  - UTR / transaction hash
-  - customer ID  
-  - etc.
-
-### CRITICAL RULES
-- Output ONLY the JSON object, no explanations.
-- All values must exist. Use null if missing.
-- Never hallucinate merchant names; infer only from text.
-- If multiple amounts appear, pick the one associated with the upcoming payment.
-- If due date not found, set "due": null.
-
-### Now extract the payment JSON from this input:
-
-From: %s
-Subject: %s
-
-%s`, email.From, email.Subject, email.Body)
+### INPUT
+current_time: %s
+from: %s
+subject: %s
+body: %s`, currentTime, email.From, email.Subject, email.Body)
 }
 
 // isValidPayment checks if the payment data has all required fields
 func (c *Client) isValidPayment(payment PaymentData) bool {
-	// Required fields: merchant_name, amount, currency, date, status
-	if payment.MerchantName == "" {
+	// Required fields: merchant, amount, currency, date, status
+	if payment.Merchant == "" {
 		return false
 	}
 	if payment.Amount == nil || *payment.Amount <= 0 {
@@ -288,7 +269,7 @@ func (c *Client) isValidPayment(payment PaymentData) bool {
 	if payment.Currency == "" {
 		return false
 	}
-	if payment.Due == "" {
+	if payment.Date == "" {
 		return false
 	}
 	if payment.Status == "" {
