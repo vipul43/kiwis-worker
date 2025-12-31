@@ -72,6 +72,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Account UPDATE trigger: now triggers account sync job reset when account is updated
 - Account sync job reset on update: sets status to pending, clears last_error and processed_at
 - Full re-sync on account update: entire sync process (account → email → LLM) reruns from beginning
+- CI migrations test job: spins up PostgreSQL 18, runs all migrations up/down/up to verify integrity
 
 ### Changed
 
