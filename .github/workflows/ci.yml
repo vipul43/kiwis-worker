@@ -103,7 +103,7 @@ jobs:
       - name: Run migrations (up)
         env:
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/kiwis_test?sslmode=disable
-        run: make migrate-up
+        run: migrate -path migrations -database "$DATABASE_URL" up
 
       - name: Verify tables exist
         env:
@@ -114,11 +114,9 @@ jobs:
       - name: Run migrations (down)
         env:
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/kiwis_test?sslmode=disable
-        run: |
-          # Run all down migrations to test rollback
-          migrate -path migrations -database "$DATABASE_URL" down -all
+        run: migrate -path migrations -database "$DATABASE_URL" down -all
 
       - name: Run migrations (up again)
         env:
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/kiwis_test?sslmode=disable
-        run: make migrate-up
+        run: migrate -path migrations -database "$DATABASE_URL" up
