@@ -145,6 +145,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Kept golang-migrate for manual migrations (CLI, Makefile) - GORM only used for queries
 - Removed go-sqlmock tests (incompatible with GORM), kept interface-based service tests
 - Account model moved from repository package to models package for consistency
+- Renamed all columns in application tables from snake_case to camelCase for consistency with account table (Prisma/frontend schema)
+- Tables affected: account_sync_job, email_sync_job, llm_sync_job, payment
+- Column renames: account_id → accountId, created_at → createdAt, updated_at → updatedAt, etc.
+- Recreated all indexes with new column names
 
 ### Removed
 
