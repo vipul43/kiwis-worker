@@ -145,6 +145,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Kept golang-migrate for manual migrations (CLI, Makefile) - GORM only used for queries
 - Removed go-sqlmock tests (incompatible with GORM), kept interface-based service tests
 - Account model moved from repository package to models package for consistency
+- Payment externalReference now stores Gmail URL for cross-referencing source email
 
 ### Removed
 
