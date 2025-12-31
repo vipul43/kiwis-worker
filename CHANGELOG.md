@@ -145,6 +145,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Kept golang-migrate for manual migrations (CLI, Makefile) - GORM only used for queries
 - Removed go-sqlmock tests (incompatible with GORM), kept interface-based service tests
 - Account model moved from repository package to models package for consistency
+- Replaced time-dependent payment statuses (upcoming, due, overdue) with single 'unpaid' status
+- Frontend calculates display status (upcoming/due/overdue) based on current time vs payment date
+- Removed current_time from LLM prompt (no longer needed for status calculation)
+- Added STATUS GUIDE section to LLM prompt for clearer status inference
 
 ### Removed
 
